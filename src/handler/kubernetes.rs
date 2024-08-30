@@ -4,10 +4,11 @@ use k8s_openapi::api::core::v1::Pod;
 use paperclip::actix::{api_v2_operation, web::Json};
 use serde_json::json;
 use log::info;
-use crate::model::kubernetes::{PodInfo, SuccessResponse};
+use crate::model::kubernetes::{AuthHeader, PodInfo, SuccessResponse};
 
 #[api_v2_operation]
-pub async fn get_pod(path: web::Path<String>) -> Result<Json<Vec<PodInfo>>, Error> {
+pub async fn get_pod(auth_header:AuthHeader, path: web::Path<String>) -> Result<Json<Vec<PodInfo>>, Error> {
+    let _auth_head = auth_header.0;
     // Interact with k8s
     // Initialize the Kubernetes client
     let client = match Client::try_default().await {

@@ -1,4 +1,4 @@
-use actix_web::{middleware::{Logger}, App, HttpServer};
+use actix_web::{middleware::Logger, App, HttpServer};
 use actix_web_lab::middleware::from_fn;
 use paperclip::actix::{web::{self}, OpenApiExt};
 use crate::middleware::auth::auth_middleware;
