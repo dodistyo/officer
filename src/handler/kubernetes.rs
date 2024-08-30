@@ -20,7 +20,7 @@ pub struct PodInfo {
 }
 
 #[api_v2_operation]
-pub async fn get_pod(req: HttpRequest, path: web::Path<String>) -> Result<Json<SuccessResponse>, Error> {
+pub async fn get_pod(req: HttpRequest, path: web::Path<String>) -> Result<Json<Vec<PodInfo>>, Error> {
     // Load API key from environment variable
     let api_key_env = get_api_key();
 
@@ -55,9 +55,14 @@ pub async fn get_pod(req: HttpRequest, path: web::Path<String>) -> Result<Json<S
 
             info!("{:?}", pod_info);
 
-            Ok(Json(SuccessResponse { status: "Success!"}))
+            Ok(Json(pod_info))
         },
         Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not get pod: {}", e)))
     }
+
+// #[api_v2_operation]
+// pub async fn isolate_pod(req: HttpRequest, path: web::Path<String>) -> Result<Json<SuccessResponse>, Error> {
+
+// }
 
 }
