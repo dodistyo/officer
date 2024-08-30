@@ -3,7 +3,7 @@ use kube::{api::{ListParams, Patch, PatchParams}, Api, Client};
 use k8s_openapi::api::core::v1::Pod;
 use paperclip::actix::{api_v2_operation, web::Json};
 use serde_json::json;
-use log::info;
+// use log::info;
 use crate::model::kubernetes::{AuthHeader, PodInfo, SuccessResponse};
 
 #[api_v2_operation]
@@ -30,7 +30,7 @@ pub async fn get_pod(auth_header:AuthHeader, path: web::Path<String>) -> Result<
                 status: p.status.as_ref().and_then(|status| status.phase.clone()).unwrap_or_else(|| "Unknown".to_string())
             }).collect();
 
-            info!("{:?}", pod_info);
+            // info!("{:?}", pod_info);
 
             Ok(Json(pod_info))
         },
