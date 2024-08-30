@@ -1,10 +1,14 @@
-use actix_web::{App, HttpServer};
+use actix_web::{middleware::{Logger}, App, HttpServer};
+use actix_web_lab::middleware::from_fn;
 use paperclip::actix::{web::{self}, OpenApiExt};
+use crate::middleware::auth::auth_middleware;
 use env_logger;
 use dotenv::dotenv;
 
+mod middleware;
 mod handler;
 mod config;
+mod model;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -16,6 +20,7 @@ async fn main() -> std::io::Result<()> {
         // Add routes like you normally do...
         .service(
             web::resource("/get-pod/{namespace}")
+                .wrap(from_fn(auth_middleware))
                 .route(web::get().to(handler::kubernetes::get_pod))
         )
         .service(
@@ -43,6 +48,7 @@ async fn main() -> std::io::Result<()> {
         //     }))
         // })
         // IMPORTANT: Build the app!
+        .wrap(Logger::default())
         .build()
     ).bind("127.0.0.1:8000")?
     .run().await

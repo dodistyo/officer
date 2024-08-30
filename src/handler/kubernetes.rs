@@ -1,38 +1,13 @@
 use actix_web::{web, Error, HttpRequest};
 use kube::{api::{ListParams, Patch, PatchParams}, Api, Client};
 use k8s_openapi::api::core::v1::Pod;
-use paperclip::actix::{api_v2_operation, web::Json, Apiv2Schema};
-use serde::{Deserialize, Serialize};
+use paperclip::actix::{api_v2_operation, web::Json};
 use serde_json::json;
-// use serde_json::Value;
-use crate::config::get_api_key;
 use log::info;
-
-#[derive(Serialize, Apiv2Schema)]
-pub struct SuccessResponse {
-    pub status: &'static str,
-}
-
-#[derive(Serialize, Deserialize, Apiv2Schema)]
-#[derive(Debug)]
-pub struct PodInfo {
-    name: String,
-    status: String
-}
+use crate::model::kubernetes::{PodInfo, SuccessResponse};
 
 #[api_v2_operation]
-pub async fn get_pod(req: HttpRequest, path: web::Path<String>) -> Result<Json<Vec<PodInfo>>, Error> {
-    // Load API key from environment variable
-    let api_key_env = get_api_key();
-
-    // Retrieve API key from headers
-    let api_key_header = req.headers().get("x-api-key");
-
-    // Check API key
-    if api_key_header.is_none() || api_key_header.unwrap().to_str().unwrap_or("") != api_key_env {
-        return Err(actix_web::error::ErrorUnauthorized("Invalid API key")); // Handle the error case
-    }
-
+pub async fn get_pod(path: web::Path<String>) -> Result<Json<Vec<PodInfo>>, Error> {
     // Interact with k8s
     // Initialize the Kubernetes client
     let client = match Client::try_default().await {
