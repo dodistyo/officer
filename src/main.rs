@@ -18,6 +18,14 @@ async fn main() -> std::io::Result<()> {
             web::resource("/get-pod/{namespace}")
                 .route(web::get().to(handler::kubernetes::get_pod))
         )
+        .service(
+            web::resource("/isolate-pod")
+                .route(web::post().to(handler::kubernetes::isolate_pod))
+        )
+        .service(
+            web::resource("/unisolate-pod")
+                .route(web::post().to(handler::kubernetes::unisolate_pod))
+        )
         // Or just .service(echo_pet) if you're using the macro syntax
         // Mount the v2/Swagger JSON spec at this path.
         // .with_json_spec_at("/api/spec/v2")

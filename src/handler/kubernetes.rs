@@ -1,8 +1,9 @@
 use actix_web::{web, Error, HttpRequest};
-use kube::{api::ListParams, Api, Client};
+use kube::{api::{ListParams, Patch, PatchParams}, Api, Client};
 use k8s_openapi::api::core::v1::Pod;
 use paperclip::actix::{api_v2_operation, web::Json, Apiv2Schema};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 // use serde_json::Value;
 use crate::config::get_api_key;
 use log::info;
@@ -59,10 +60,58 @@ pub async fn get_pod(req: HttpRequest, path: web::Path<String>) -> Result<Json<V
         },
         Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not get pod: {}", e)))
     }
+}
 
-// #[api_v2_operation]
-// pub async fn isolate_pod(req: HttpRequest, path: web::Path<String>) -> Result<Json<SuccessResponse>, Error> {
+#[api_v2_operation]
+pub async fn isolate_pod(_: HttpRequest) -> Result<Json<SuccessResponse>, Error> {
+    let namespace = "sample"; // Replace with your namespace
+    let pod_name = "sample-app-c95bd7848-bnc9n"; // Replace with your pod name
+    // Interact with k8s
+    // Initialize the Kubernetes client
+    let client = match Client::try_default().await {
+        Ok(c) => c,
+        Err(e) => return Err(actix_web::error::ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
+    };
+    // Create an API handle for Pod resources
+    let pods: Api<Pod> = Api::namespaced(client, &namespace);
+    let patch = json!({
+        "metadata": {
+            "labels": {
+                "isolate": "true"
+            }
+        }
+    });
+     // Apply the patch to the pod
+     let pp = PatchParams::apply("add-label-isolate");
+     match pods.patch(pod_name, &pp, &Patch::Merge(&patch)).await {
+         Ok(_) => Ok(Json(SuccessResponse { status: "Pod isolated succesfully" })),
+         Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
+     }
+}
 
-// }
-
+#[api_v2_operation]
+pub async fn unisolate_pod(_: HttpRequest) -> Result<Json<SuccessResponse>, Error> {
+    let namespace = "sample"; // Replace with your namespace
+    let pod_name = "sample-app-c95bd7848-bnc9n"; // Replace with your pod name
+    // Interact with k8s
+    // Initialize the Kubernetes client
+    let client = match Client::try_default().await {
+        Ok(c) => c,
+        Err(e) => return Err(actix_web::error::ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
+    };
+    // Create an API handle for Pod resources
+    let pods: Api<Pod> = Api::namespaced(client, &namespace);
+    let patch = json!({
+        "metadata": {
+            "labels": {
+                "isolate": null
+            }
+        }
+    });
+     // Apply the patch to the pod
+     let pp = PatchParams::apply("add-label-isolate");
+     match pods.patch(pod_name, &pp, &Patch::Merge(&patch)).await {
+         Ok(_) => Ok(Json(SuccessResponse { status: "Pod is being freed" })),
+         Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
+     }
 }
