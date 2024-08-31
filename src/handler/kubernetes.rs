@@ -3,7 +3,7 @@ use kube::{api::{ListParams, Patch, PatchParams}, Api, Client};
 use k8s_openapi::api::core::v1::Pod;
 use paperclip::actix::{api_v2_operation, web::Json};
 use serde_json::{json, Value};
-use crate::model::kubernetes::{AuthHeader, PodInfo, SuccessResponse, UnisolatePodPayload};
+use crate::model::kubernetes::{PodInfo, SuccessResponse, UnisolatePodPayload};
 
 #[api_v2_operation(tags("kubernetes"))]
 /// Get pods in a namespace 
