@@ -10,12 +10,18 @@ pub struct SuccessResponse {
 }
 
 #[derive(Serialize, Deserialize, Apiv2Schema)]
-#[derive(Debug)]
+pub struct UnisolatePodPayload {
+    pub namespace: String,
+    pub pod_name: String,
+}
+
+#[derive(Serialize, Deserialize, Apiv2Schema)]
 pub struct PodInfo {
     pub name: String,
     pub status: String
 }
 
+// Swagger Auth
 #[derive(Apiv2Security)]
 #[openapi(
   apiKey,

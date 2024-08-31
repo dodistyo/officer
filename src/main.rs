@@ -1,4 +1,4 @@
-use actix_web::{middleware::{from_fn, Logger}, App, HttpServer};
+use actix_web::{middleware::from_fn, App, HttpServer};
 use paperclip::actix::{web::{self}, OpenApiExt};
 use crate::middleware::auth::auth_middleware;
 use env_logger;
@@ -24,10 +24,12 @@ async fn main() -> std::io::Result<()> {
         )
         .service(
             web::resource("/isolate-pod")
+                .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::isolate_pod))
         )
         .service(
             web::resource("/unisolate-pod")
+                .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::unisolate_pod))
         )
         // Or just .service(echo_pet) if you're using the macro syntax
@@ -47,8 +49,8 @@ async fn main() -> std::io::Result<()> {
         //     }))
         // })
         // IMPORTANT: Build the app!
-        .wrap(Logger::default())
+        // .wrap(Logger::default())
         .build()
-    ).bind("127.0.0.1:8000")?
+    ).bind("0.0.0.0:8000")?
     .run().await
 }

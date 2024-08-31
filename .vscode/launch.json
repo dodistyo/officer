@@ -17,10 +17,7 @@
                 }
             },
             "args": [],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "HTTPS_PROXY": "localhost:8888"
-            }
+            "cwd": "${workspaceFolder}"
         },
         {
             "type": "lldb",
