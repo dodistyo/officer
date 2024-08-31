@@ -9,8 +9,7 @@ use crate::model::kubernetes::{AuthHeader, PodInfo, SuccessResponse, UnisolatePo
 /// Get pods in a namespace 
 ///
 /// List all pods in a namespace, it will show their names and statuses
-pub async fn get_pod(auth_header:AuthHeader, path: web::Path<String>) -> Result<Json<Vec<PodInfo>>, Error> {
-    let _ = auth_header.0;
+pub async fn get_pod(path: web::Path<String>) -> Result<Json<Vec<PodInfo>>, Error> {
     // Interact with k8s
     // Initialize the Kubernetes client
     let client = match Client::try_default().await {
