@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 actix-web = "4.9.0"
 dotenv = "0.15.0"
-kube = { version = "0.93.1", features = ["http-proxy"] }
+kube = { version = "0.93.1" }
 serde = "1.0.209"
 serde_json = "1.0.127"
 k8s-openapi = { version = "0.22", features = ["latest"] }

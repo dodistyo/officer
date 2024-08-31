@@ -64,27 +64,36 @@ pub async fn isolate_pod(_: HttpRequest, payload: web::Json<Value>) -> Result<Js
         .and_then(|fields| fields.get("k8s.pod.name"))
         .and_then(Value::as_str)
         .unwrap_or("Unknown");
-    // Interact with k8s
-    // Initialize the Kubernetes client
-    let client = match Client::try_default().await {
-        Ok(c) => c,
-        Err(e) => return Err(actix_web::error::ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
-    };
-    // Create an API handle for Pod resources
-    let pods: Api<Pod> = Api::namespaced(client, &namespace);
-    let patch = json!({
-        "metadata": {
-            "labels": {
-                "isolate": "true"
+
+    let falco_rule = json_payload.get("rule").and_then(Value::as_str).unwrap_or("Unknown");
+    let implemented_falco_rules = vec!["network_scan_process_in_container"];
+    
+    if implemented_falco_rules.contains(&falco_rule) {
+        // Interact with k8s
+        // Initialize the Kubernetes client
+        let client = match Client::try_default().await {
+            Ok(c) => c,
+            Err(e) => return Err(actix_web::error::ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
+        };
+        // Create an API handle for Pod resources
+        let pods: Api<Pod> = Api::namespaced(client, &namespace);
+        let patch = json!({
+            "metadata": {
+                "labels": {
+                    "isolate": "true"
+                }
             }
+        });
+        // Apply the patch to the pod
+        let pp = PatchParams::apply("add-label-isolate");
+        match pods.patch(pod_name, &pp, &Patch::Merge(&patch)).await {
+            Ok(_) => Ok(Json(SuccessResponse { status: "Pod isolated succesfully" })),
+            Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
         }
-    });
-    // Apply the patch to the pod
-    let pp = PatchParams::apply("add-label-isolate");
-    match pods.patch(pod_name, &pp, &Patch::Merge(&patch)).await {
-        Ok(_) => Ok(Json(SuccessResponse { status: "Pod isolated succesfully" })),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
+    } else {
+        Ok(Json(SuccessResponse { status: "Skipped, no action taken" }))
     }
+   
 }
 
 #[api_v2_operation(tags("kubernetes"))]
