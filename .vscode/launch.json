@@ -9,7 +9,8 @@
                 "args": [
                     "build",
                     "--bin=officer",
-                    "--package=officer"
+                    "--package=officer",
+                    "--target=x86_64-unknown-linux-musl"
                 ],
                 "filter": {
                     "name": "officer",
@@ -28,7 +29,8 @@
                     "test",
                     "--no-run",
                     "--bin=officer",
-                    "--package=officer"
+                    "--package=officer",
+                    "--target=x86_64-unknown-linux-musl"
                 ],
                 "filter": {
                     "name": "officer",

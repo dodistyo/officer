@@ -5,7 +5,11 @@
             "label": "cargo build",
             "command": "cargo",
             "type": "shell",
-            "args": ["build"],
+            "args": [
+                "build",
+                "--release",
+                "--target x86_64-unknown-linux-musl"
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true

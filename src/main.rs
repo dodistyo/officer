@@ -1,8 +1,9 @@
 use actix_web::{middleware::from_fn, App, HttpServer};
 use paperclip::actix::{web::{self}, OpenApiExt};
-use crate::middleware::auth::auth_middleware;
+use middleware::auth::auth_middleware;
 use env_logger;
 use dotenv::dotenv;
+use config::get_envar;
 
 mod middleware;
 mod handler;
@@ -11,8 +12,16 @@ mod model;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // initialize
     dotenv().ok();
     env_logger::init();
+    let required_vars = ["API_KEY", "RUST_LOG"];
+    // Check each required environment variable
+    for &var in required_vars.iter() {
+        let _value = get_envar(var);
+    }
+    // end of initialize
+
     HttpServer::new(|| App::new()
         // Record services and routes from this line.
         .wrap_api()
