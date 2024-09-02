@@ -1,15 +1,15 @@
-use actix_web::{web, Error, HttpRequest};
+use actix_web::{web, Error};
 use kube::{api::{ListParams, Patch, PatchParams}, Api, Client};
 use k8s_openapi::api::core::v1::Pod;
 use paperclip::actix::{api_v2_operation, web::Json};
 use serde_json::{json, Value};
-use crate::model::kubernetes::{PodInfo, SuccessResponse, UnisolatePodPayload};
+use crate::model::kubernetes::{AuthHeader, PodInfo, SuccessResponse, UnisolatePodPayload};
 
 #[api_v2_operation(tags("kubernetes"))]
 /// Get pods in a namespace 
 ///
 /// List all pods in a namespace, it will show their names and statuses
-pub async fn get_pod(path: web::Path<String>) -> Result<Json<Vec<PodInfo>>, Error> {
+pub async fn get_pod(_: AuthHeader, path: web::Path<String>) -> Result<Json<Vec<PodInfo>>, Error> {
     // Interact with k8s
     // Initialize the Kubernetes client
     let client = match Client::try_default().await {
@@ -47,7 +47,7 @@ pub async fn get_pod(path: web::Path<String>) -> Result<Json<Vec<PodInfo>>, Erro
 /// Requirement: Network policy that deny Ingress and Eggress with label selector isolate: "true" 
 /// 
 /// Example usage: Use this endpoint to isolate pod when threat is detected on a pod
-pub async fn isolate_pod(_: HttpRequest, payload: web::Json<Value>) -> Result<Json<SuccessResponse>, Error> {
+pub async fn isolate_pod(_: AuthHeader, payload: web::Json<Value>) -> Result<Json<SuccessResponse>, Error> {
     // Get the JSON payload
     let json_payload = payload.into_inner();
     // Extract values from the `output_fields` object
@@ -103,7 +103,7 @@ pub async fn isolate_pod(_: HttpRequest, payload: web::Json<Value>) -> Result<Js
 /// Requirement: Network policy that deny Ingress and Eggress with label selector isolate: "true" 
 /// 
 /// Example usage: Use this endpoint to isolate pod when threat is detected 
-pub async fn unisolate_pod(_: HttpRequest, payload: web::Json<UnisolatePodPayload>) -> Result<Json<SuccessResponse>, Error> {
+pub async fn unisolate_pod(_: AuthHeader, payload: web::Json<UnisolatePodPayload>) -> Result<Json<SuccessResponse>, Error> {
     let namespace = &payload.namespace;
     let pod_name = &payload.pod_name;
     // Interact with k8s
