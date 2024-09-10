@@ -1,9 +1,10 @@
 use actix_web::{web, Error};
+use chrono::Utc;
 use kube::{api::{ListParams, Patch, PatchParams}, Api, Client};
-use k8s_openapi::api::core::v1::Pod;
+use k8s_openapi::api::{apps::v1::Deployment, core::v1::Pod};
 use paperclip::actix::{api_v2_operation, web::Json};
 use serde_json::{json, Value};
-use crate::model::kubernetes::{AuthHeader, PodInfo, SuccessResponse, UnisolatePodPayload};
+use crate::model::kubernetes::{AuthHeader, PodInfo, ServiceDeploymentPayload, SuccessResponse, UnisolatePodPayload};
 
 #[api_v2_operation(tags("kubernetes"))]
 /// Get pods in a namespace 
@@ -86,11 +87,11 @@ pub async fn isolate_pod(_: AuthHeader, payload: web::Json<Value>) -> Result<Jso
         // Apply the patch to the pod
         let pp = PatchParams::apply("add-label-isolate");
         match pods.patch(pod_name, &pp, &Patch::Merge(&patch)).await {
-            Ok(_) => Ok(Json(SuccessResponse { status: "Pod isolated succesfully" })),
+            Ok(_) => Ok(Json(SuccessResponse { status: "Pod isolated succesfully".to_string() })),
             Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
         }
     } else {
-        Ok(Json(SuccessResponse { status: "Skipped, no action taken" }))
+        Ok(Json(SuccessResponse { status: "Skipped, no action taken".to_string() }))
     }
    
 }
@@ -124,7 +125,50 @@ pub async fn unisolate_pod(_: AuthHeader, payload: web::Json<UnisolatePodPayload
      // Apply the patch to the pod
      let pp = PatchParams::apply("add-label-isolate");
      match pods.patch(pod_name, &pp, &Patch::Merge(&patch)).await {
-         Ok(_) => Ok(Json(SuccessResponse { status: "Pod is being freed" })),
+         Ok(_) => Ok(Json(SuccessResponse { status: "Pod is being freed".to_string() })),
          Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
      }
+}
+
+#[api_v2_operation(tags("kubernetes"))]
+/// Isolate pod
+///
+/// Isolating pod network connection, both Ingress and Egress
+/// 
+/// Requirement: Network policy that deny Ingress and Eggress with label selector isolate: "true" 
+/// 
+/// Example usage: Use this endpoint to isolate pod when threat is detected on a pod
+pub async fn restart_service_deployment(_: AuthHeader, payload: web::Json<ServiceDeploymentPayload>) -> Result<Json<SuccessResponse>, Error> {
+    // Get `namespace` and `pod name`
+    let namespace = &payload.namespace;
+
+    let service_deployment = &payload.service_deployment;
+
+    // Interact with k8s
+    // Initialize the Kubernetes client
+    let client = match Client::try_default().await {
+        Ok(c) => c,
+        Err(e) => return Err(actix_web::error::ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
+    };
+    // Create an API handle for Pod resources
+    let deployment: Api<Deployment> = Api::namespaced(client, &namespace);
+    let patch = json!({
+        "spec": {
+            "template": {
+                "metadata": {
+                    "annotations": {
+                        "kubectl.kubernetes.io/restartedAt": Utc::now().to_rfc3339(),
+                    }
+                }
+            }
+        }
+    });
+    // Apply the patch to the pod
+    let pp = PatchParams::apply("restart-deployment");
+    match deployment.patch(service_deployment, &pp, &Patch::Merge(&patch)).await {
+        Ok(_) => Ok(Json(SuccessResponse { status: format!("Deployment {} restarted", service_deployment) })),
+        Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
+    }
+
+   
 }

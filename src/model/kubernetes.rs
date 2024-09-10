@@ -2,25 +2,6 @@ use actix_web::{dev::Payload, Error, FromRequest, HttpRequest};
 use futures::future::{ready, Ready};
 use paperclip::actix::{Apiv2Schema, Apiv2Security};
 use serde::{Deserialize, Serialize};
-
-
-#[derive(Serialize, Apiv2Schema)]
-pub struct SuccessResponse {
-    pub status: &'static str,
-}
-
-#[derive(Serialize, Deserialize, Apiv2Schema)]
-pub struct UnisolatePodPayload {
-    pub namespace: String,
-    pub pod_name: String,
-}
-
-#[derive(Serialize, Deserialize, Apiv2Schema)]
-pub struct PodInfo {
-    pub name: String,
-    pub status: String
-}
-
 // Swagger Auth
 #[derive(Apiv2Security)]
 #[openapi(
@@ -45,4 +26,27 @@ impl FromRequest for AuthHeader {
         // If the header is not present or not valid, return an error
         ready(Err(actix_web::error::ErrorUnauthorized("Unauthorized")))
     }
+}
+
+#[derive(Serialize, Deserialize, Apiv2Schema)]
+pub struct SuccessResponse {
+    pub status: String,
+}
+
+#[derive(Serialize, Deserialize, Apiv2Schema)]
+pub struct UnisolatePodPayload {
+    pub namespace: String,
+    pub pod_name: String,
+}
+
+#[derive(Serialize, Deserialize, Apiv2Schema)]
+pub struct PodInfo {
+    pub name: String,
+    pub status: String
+}
+
+#[derive(Serialize, Deserialize, Apiv2Schema)]
+pub struct ServiceDeploymentPayload {
+    pub namespace: String,
+    pub service_deployment: String
 }
