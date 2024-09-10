@@ -1,10 +1,10 @@
 use actix_web::{web, Error};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use kube::{api::{ListParams, Patch, PatchParams}, Api, Client};
 use k8s_openapi::api::{apps::v1::Deployment, core::v1::Pod};
 use paperclip::actix::{api_v2_operation, web::Json};
 use serde_json::{json, Value};
-use crate::model::kubernetes::{AuthHeader, PodInfo, ServiceDeploymentPayload, SuccessResponse, UnisolatePodPayload};
+use crate::{model::kubernetes::{AuthHeader, PodInfo, ServiceDeploymentPayload, SuccessResponse, UnisolatePodPayload}, util::time_helper};
 
 #[api_v2_operation(tags("kubernetes"))]
 /// Get pods in a namespace 
@@ -27,12 +27,27 @@ pub async fn get_pod(_: AuthHeader, path: web::Path<String>) -> Result<Json<Vec<
     // List pods with default parameters
     match pods.list(&ListParams::default()).await {
         Ok(pod_list) => {
-            let pod_info: Vec<PodInfo> = pod_list.items.into_iter().map(|p| PodInfo {
-                name: p.metadata.name.unwrap_or_default(),
-                status: p.status.as_ref().and_then(|status| status.phase.clone()).unwrap_or_else(|| "Unknown".to_string())
+            let now = Utc::now();
+            let pod_info: Vec<PodInfo> = pod_list.items.into_iter().map(|p| {
+                let name = p.metadata.name.unwrap_or_default();
+                let status = p.status.as_ref().and_then(|status| status.phase.clone()).unwrap_or_else(|| "Unknown".to_string());
+                
+                // Convert Kubernetes Time to chrono DateTime
+                let creation_time = match p.metadata.creation_timestamp {
+                    Some(ref ts) => DateTime::<Utc>::from(ts.0.clone()),
+                    None => now, // Fallback if creation_timestamp is None
+                };
+                
+                // Calculate the age
+                let age_duration = now.signed_duration_since(creation_time).num_seconds();
+                let age = time_helper::format_duration(age_duration);
+                
+                PodInfo {
+                    name,
+                    status,
+                    age,
+                }
             }).collect();
-
-            // info!("{:?}", pod_info);
 
             Ok(Json(pod_info))
         },
@@ -131,13 +146,9 @@ pub async fn unisolate_pod(_: AuthHeader, payload: web::Json<UnisolatePodPayload
 }
 
 #[api_v2_operation(tags("kubernetes"))]
-/// Isolate pod
+/// Restart Kubernetes Deployment
 ///
-/// Isolating pod network connection, both Ingress and Egress
-/// 
-/// Requirement: Network policy that deny Ingress and Eggress with label selector isolate: "true" 
-/// 
-/// Example usage: Use this endpoint to isolate pod when threat is detected on a pod
+/// This api will restart a deployment on a specific namespace
 pub async fn restart_service_deployment(_: AuthHeader, payload: web::Json<ServiceDeploymentPayload>) -> Result<Json<SuccessResponse>, Error> {
     // Get `namespace` and `pod name`
     let namespace = &payload.namespace;

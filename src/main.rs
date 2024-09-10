@@ -9,6 +9,7 @@ mod middleware;
 mod handler;
 mod config;
 mod model;
+mod util;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -40,6 +41,11 @@ async fn main() -> std::io::Result<()> {
             web::resource("/unisolate-pod")
                 .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::unisolate_pod))
+        )
+        .service(
+            web::resource("/restart-service-deployment")
+                .wrap(from_fn(auth_middleware))
+                .route(web::post().to(handler::kubernetes::restart_service_deployment))
         )
         // Or just .service(echo_pet) if you're using the macro syntax
         // Mount the v2/Swagger JSON spec at this path.

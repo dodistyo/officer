@@ -42,7 +42,8 @@ pub struct UnisolatePodPayload {
 #[derive(Serialize, Deserialize, Apiv2Schema)]
 pub struct PodInfo {
     pub name: String,
-    pub status: String
+    pub status: String,
+    pub age: String
 }
 
 #[derive(Serialize, Deserialize, Apiv2Schema)]
