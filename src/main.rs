@@ -24,18 +24,18 @@ async fn main() -> std::io::Result<()> {
     // end of initialize
 
     HttpServer::new(|| App::new()
-        // Record services and routes from this line.
-        .wrap_api()
-        // Add routes like you normally do...
-        .service(
-            web::resource("/get-pod/{namespace}")
-                .wrap(from_fn(auth_middleware))
-                .route(web::get().to(handler::kubernetes::get_pod))
-        )
         .service(
             web::resource("/isolate-pod")
                 .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::isolate_pod))
+        )
+        // Record services and routes from this line.
+        .wrap_api()
+        // Add routes like you normally do...
+        .service(
+            web::resource("/get-pod")
+                .wrap(from_fn(auth_middleware))
+                .route(web::get().to(handler::kubernetes::get_pod))
         )
         .service(
             web::resource("/unisolate-pod")

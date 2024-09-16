@@ -1,16 +1,21 @@
-use actix_web::{web, Error};
+use actix_web::Error;
 use chrono::{DateTime, Utc};
 use kube::{api::{ListParams, Patch, PatchParams}, Api, Client};
 use k8s_openapi::api::{apps::v1::Deployment, core::v1::Pod};
-use paperclip::actix::{api_v2_operation, web::Json};
+use paperclip::actix::{api_v2_operation, web::{Json, Query}};
 use serde_json::{json, Value};
-use crate::{model::kubernetes::{AuthHeader, PodInfo, ServiceDeploymentPayload, SuccessResponse, UnisolatePodPayload}, util::time_helper};
+use crate::{
+    model::kubernetes::{
+        AuthHeader, GetPodQuery, PodInfo, ServiceDeploymentPayload, SuccessResponse, UnisolatePodPayload
+    },
+    util::time_helper
+};
 
-#[api_v2_operation(tags("kubernetes"))]
+#[api_v2_operation(tags("Kubernetes"))]
 /// Get pods in a namespace 
 ///
 /// List all pods in a namespace, it will show their names and statuses
-pub async fn get_pod(_: AuthHeader, path: web::Path<String>) -> Result<Json<Vec<PodInfo>>, Error> {
+pub async fn get_pod(_: AuthHeader, query: Query<GetPodQuery>) -> Result<Json<Vec<PodInfo>>, Error> {
     // Interact with k8s
     // Initialize the Kubernetes client
     let client = match Client::try_default().await {
@@ -19,7 +24,7 @@ pub async fn get_pod(_: AuthHeader, path: web::Path<String>) -> Result<Json<Vec<
     };
 
     // Specify the namespace
-    let namespace = if path.is_empty() { "default".to_string() } else { path.into_inner() };
+    let namespace = &query.namespace;
 
     // Create an API handle for Pod resources
     let pods: Api<Pod> = Api::namespaced(client, &namespace);
@@ -55,7 +60,46 @@ pub async fn get_pod(_: AuthHeader, path: web::Path<String>) -> Result<Json<Vec<
     }
 }
 
-#[api_v2_operation(tags("kubernetes"))]
+#[api_v2_operation(tags("Kubernetes"))]
+/// Restart Kubernetes Deployment
+///
+/// This api will restart a deployment on a specific namespace
+pub async fn restart_service_deployment(_: AuthHeader, payload: Json<ServiceDeploymentPayload>) -> Result<Json<SuccessResponse>, Error> {
+    // Get `namespace` and `pod name`
+    let namespace = &payload.namespace;
+
+    let service_deployment = &payload.service_deployment;
+
+    // Interact with k8s
+    // Initialize the Kubernetes client
+    let client = match Client::try_default().await {
+        Ok(c) => c,
+        Err(e) => return Err(actix_web::error::ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
+    };
+    // Create an API handle for Pod resources
+    let deployment: Api<Deployment> = Api::namespaced(client, &namespace);
+    let patch = json!({
+        "spec": {
+            "template": {
+                "metadata": {
+                    "annotations": {
+                        "kubectl.Kubernetes.io/restartedAt": Utc::now().to_rfc3339(),
+                    }
+                }
+            }
+        }
+    });
+    // Apply the patch to the pod
+    let pp = PatchParams::apply("restart-deployment");
+    match deployment.patch(service_deployment, &pp, &Patch::Merge(&patch)).await {
+        Ok(_) => Ok(Json(SuccessResponse { status: format!("Deployment {} restarted", service_deployment) })),
+        Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
+    }
+
+   
+}
+
+#[api_v2_operation(tags("Kubernetes Security"))]
 /// Isolate pod
 ///
 /// Isolating pod network connection, both Ingress and Egress
@@ -63,7 +107,7 @@ pub async fn get_pod(_: AuthHeader, path: web::Path<String>) -> Result<Json<Vec<
 /// Requirement: Network policy that deny Ingress and Eggress with label selector isolate: "true" 
 /// 
 /// Example usage: Use this endpoint to isolate pod when threat is detected on a pod
-pub async fn isolate_pod(_: AuthHeader, payload: web::Json<Value>) -> Result<Json<SuccessResponse>, Error> {
+pub async fn isolate_pod(_: AuthHeader, payload: Json<Value>) -> Result<Json<SuccessResponse>, Error> {
     // Get the JSON payload
     let json_payload = payload.into_inner();
     // Extract values from the `output_fields` object
@@ -111,7 +155,7 @@ pub async fn isolate_pod(_: AuthHeader, payload: web::Json<Value>) -> Result<Jso
    
 }
 
-#[api_v2_operation(tags("kubernetes"))]
+#[api_v2_operation(tags("Kubernetes Security"))]
 /// Remove pod Isolation
 ///
 /// Allowing Ingress and Egress network connection
@@ -119,7 +163,7 @@ pub async fn isolate_pod(_: AuthHeader, payload: web::Json<Value>) -> Result<Jso
 /// Requirement: Network policy that deny Ingress and Eggress with label selector isolate: "true" 
 /// 
 /// Example usage: Use this endpoint to isolate pod when threat is detected 
-pub async fn unisolate_pod(_: AuthHeader, payload: web::Json<UnisolatePodPayload>) -> Result<Json<SuccessResponse>, Error> {
+pub async fn unisolate_pod(_: AuthHeader, payload: Json<UnisolatePodPayload>) -> Result<Json<SuccessResponse>, Error> {
     let namespace = &payload.namespace;
     let pod_name = &payload.pod_name;
     // Interact with k8s
@@ -143,43 +187,4 @@ pub async fn unisolate_pod(_: AuthHeader, payload: web::Json<UnisolatePodPayload
          Ok(_) => Ok(Json(SuccessResponse { status: "Pod is being freed".to_string() })),
          Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
      }
-}
-
-#[api_v2_operation(tags("kubernetes"))]
-/// Restart Kubernetes Deployment
-///
-/// This api will restart a deployment on a specific namespace
-pub async fn restart_service_deployment(_: AuthHeader, payload: web::Json<ServiceDeploymentPayload>) -> Result<Json<SuccessResponse>, Error> {
-    // Get `namespace` and `pod name`
-    let namespace = &payload.namespace;
-
-    let service_deployment = &payload.service_deployment;
-
-    // Interact with k8s
-    // Initialize the Kubernetes client
-    let client = match Client::try_default().await {
-        Ok(c) => c,
-        Err(e) => return Err(actix_web::error::ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
-    };
-    // Create an API handle for Pod resources
-    let deployment: Api<Deployment> = Api::namespaced(client, &namespace);
-    let patch = json!({
-        "spec": {
-            "template": {
-                "metadata": {
-                    "annotations": {
-                        "kubectl.kubernetes.io/restartedAt": Utc::now().to_rfc3339(),
-                    }
-                }
-            }
-        }
-    });
-    // Apply the patch to the pod
-    let pp = PatchParams::apply("restart-deployment");
-    match deployment.patch(service_deployment, &pp, &Patch::Merge(&patch)).await {
-        Ok(_) => Ok(Json(SuccessResponse { status: format!("Deployment {} restarted", service_deployment) })),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
-    }
-
-   
 }

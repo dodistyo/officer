@@ -46,7 +46,12 @@ pub struct PodInfo {
     pub age: String
 }
 
-#[derive(Serialize, Deserialize, Apiv2Schema)]
+#[derive(Deserialize, Apiv2Schema)]
+pub struct GetPodQuery {
+    pub namespace: String
+}
+
+#[derive(Deserialize, Apiv2Schema)]
 pub struct ServiceDeploymentPayload {
     pub namespace: String,
     pub service_deployment: String
