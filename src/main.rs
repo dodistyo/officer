@@ -33,6 +33,11 @@ async fn main() -> std::io::Result<()> {
         .wrap_api()
         // Add routes like you normally do...
         .service(
+            web::resource("/deploy-service")
+                .wrap(from_fn(auth_middleware))
+                .route(web::post().to(handler::kubernetes::deploy_service))
+        )
+        .service(
             web::resource("/get-pod")
                 .wrap(from_fn(auth_middleware))
                 .route(web::get().to(handler::kubernetes::get_pod))

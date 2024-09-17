@@ -1,4 +1,4 @@
-use actix_web::Error;
+use actix_web::{error::ErrorInternalServerError, Error};
 use chrono::{DateTime, Utc};
 use kube::{api::{ListParams, Patch, PatchParams}, Api, Client};
 use k8s_openapi::api::{apps::v1::Deployment, core::v1::Pod};
@@ -6,7 +6,7 @@ use paperclip::actix::{api_v2_operation, web::{Json, Query}};
 use serde_json::{json, Value};
 use crate::{
     model::kubernetes::{
-        AuthHeader, GetPodQuery, PodInfo, ServiceDeploymentPayload, SuccessResponse, UnisolatePodPayload
+        AuthHeader, DeployServicePayload, GetPodQuery, PodInfo, RestartServicePayload, SuccessResponse, UnisolatePodPayload
     },
     util::time_helper
 };
@@ -20,7 +20,7 @@ pub async fn get_pod(_: AuthHeader, query: Query<GetPodQuery>) -> Result<Json<Ve
     // Initialize the Kubernetes client
     let client = match Client::try_default().await {
         Ok(c) => c,
-        Err(e) => return Err(actix_web::error::ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
+        Err(e) => return Err(ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
     };
 
     // Specify the namespace
@@ -56,7 +56,7 @@ pub async fn get_pod(_: AuthHeader, query: Query<GetPodQuery>) -> Result<Json<Ve
 
             Ok(Json(pod_info))
         },
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not get pod: {}", e)))
+        Err(e) => Err(ErrorInternalServerError(format!("Could not get pod: {}", e)))
     }
 }
 
@@ -64,7 +64,7 @@ pub async fn get_pod(_: AuthHeader, query: Query<GetPodQuery>) -> Result<Json<Ve
 /// Restart Kubernetes Deployment
 ///
 /// This api will restart a deployment on a specific namespace
-pub async fn restart_service_deployment(_: AuthHeader, payload: Json<ServiceDeploymentPayload>) -> Result<Json<SuccessResponse>, Error> {
+pub async fn restart_service_deployment(_: AuthHeader, payload: Json<RestartServicePayload>) -> Result<Json<SuccessResponse>, Error> {
     // Get `namespace` and `pod name`
     let namespace = &payload.namespace;
 
@@ -74,7 +74,7 @@ pub async fn restart_service_deployment(_: AuthHeader, payload: Json<ServiceDepl
     // Initialize the Kubernetes client
     let client = match Client::try_default().await {
         Ok(c) => c,
-        Err(e) => return Err(actix_web::error::ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
+        Err(e) => return Err(ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
     };
     // Create an API handle for Pod resources
     let deployment: Api<Deployment> = Api::namespaced(client, &namespace);
@@ -93,10 +93,65 @@ pub async fn restart_service_deployment(_: AuthHeader, payload: Json<ServiceDepl
     let pp = PatchParams::apply("restart-deployment");
     match deployment.patch(service_deployment, &pp, &Patch::Merge(&patch)).await {
         Ok(_) => Ok(Json(SuccessResponse { status: format!("Deployment {} restarted", service_deployment) })),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
+        Err(e) => Err(ErrorInternalServerError(format!("Could not patch pod: {}", e)))
     }
 
    
+}
+
+#[api_v2_operation(tags("Kubernetes"))]
+/// Kubernetes Deployment
+///
+/// This api will help you to deploy service in kubernetes
+pub async fn deploy_service(_: AuthHeader, payload: Json<DeployServicePayload>) -> Result<Json<SuccessResponse>, Error> {
+    // Get `namespace` and `pod name`
+    let namespace = &payload.namespace;
+    let service_deployment = &payload.service_deployment;
+    let container_name = &payload.container_name;
+    let image_tag = &payload.version;
+
+    // Interact with k8s
+    // Initialize the Kubernetes client
+    let client = match Client::try_default().await {
+        Ok(c) => c,
+        Err(e) => return Err(ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
+    };
+
+    let deployment: Api<Deployment> = Api::namespaced(client, &namespace);
+    let current_deployment = match deployment.get(service_deployment).await {
+        Ok(c) => Ok(c),
+        Err(e) => Err(ErrorInternalServerError(format!("Get deployment failed: {}", e))),
+    }?;
+    // Find the container by name and print its image
+    if let Some(container) = current_deployment.spec.unwrap().template.spec.unwrap().containers.iter().find(|c| c.name.as_str() == container_name) {
+        // Print the image for the found container or a default message if no image is specified
+        let image_name = container.image.as_deref().unwrap_or("No image specified");
+        let parts: Vec<&str> = image_name.split(':').collect();
+        let normalize_image_name = parts[0];
+        let full_image = format!("{}:{}", normalize_image_name, image_tag);
+        let patch = json!({
+            "spec": {
+                "template": {
+                    "spec": {
+                        "containers": [
+                            {
+                                "name": container_name,
+                                "image": full_image
+                            }
+                        ]
+                    }
+                }
+            }
+        });
+        // Apply the patch to the pod
+        let pp = PatchParams::apply("deploy-service");
+        match deployment.patch(service_deployment, &pp, &Patch::Merge(&patch)).await {
+            Ok(_) => Ok(Json(SuccessResponse { status: format!("Service {} deployed!", service_deployment) })),
+            Err(e) => Err(ErrorInternalServerError(format!("Could not patch pod: {}", e)))
+        }
+    } else {
+        return Err(ErrorInternalServerError(format!("Failed to deploy")))
+    }
 }
 
 #[api_v2_operation(tags("Kubernetes Security"))]
@@ -132,7 +187,7 @@ pub async fn isolate_pod(_: AuthHeader, payload: Json<Value>) -> Result<Json<Suc
         // Initialize the Kubernetes client
         let client = match Client::try_default().await {
             Ok(c) => c,
-            Err(e) => return Err(actix_web::error::ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
+            Err(e) => return Err(ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
         };
         // Create an API handle for Pod resources
         let pods: Api<Pod> = Api::namespaced(client, &namespace);
@@ -147,7 +202,7 @@ pub async fn isolate_pod(_: AuthHeader, payload: Json<Value>) -> Result<Json<Suc
         let pp = PatchParams::apply("add-label-isolate");
         match pods.patch(pod_name, &pp, &Patch::Merge(&patch)).await {
             Ok(_) => Ok(Json(SuccessResponse { status: "Pod isolated succesfully".to_string() })),
-            Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
+            Err(e) => Err(ErrorInternalServerError(format!("Could not patch pod: {}", e)))
         }
     } else {
         Ok(Json(SuccessResponse { status: "Skipped, no action taken".to_string() }))
@@ -170,7 +225,7 @@ pub async fn unisolate_pod(_: AuthHeader, payload: Json<UnisolatePodPayload>) ->
     // Initialize the Kubernetes client
     let client = match Client::try_default().await {
         Ok(c) => c,
-        Err(e) => return Err(actix_web::error::ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
+        Err(e) => return Err(ErrorInternalServerError(format!("Kubernetes connection failed: {}", e))),
     };
     // Create an API handle for Pod resources
     let pods: Api<Pod> = Api::namespaced(client, namespace);
@@ -185,6 +240,6 @@ pub async fn unisolate_pod(_: AuthHeader, payload: Json<UnisolatePodPayload>) ->
      let pp = PatchParams::apply("add-label-isolate");
      match pods.patch(pod_name, &pp, &Patch::Merge(&patch)).await {
          Ok(_) => Ok(Json(SuccessResponse { status: "Pod is being freed".to_string() })),
-         Err(e) => Err(actix_web::error::ErrorInternalServerError(format!("Could not patch pod: {}", e)))
+         Err(e) => Err(ErrorInternalServerError(format!("Could not patch pod: {}", e)))
      }
 }

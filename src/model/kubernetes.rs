@@ -52,7 +52,15 @@ pub struct GetPodQuery {
 }
 
 #[derive(Deserialize, Apiv2Schema)]
-pub struct ServiceDeploymentPayload {
+pub struct RestartServicePayload {
     pub namespace: String,
     pub service_deployment: String
+}
+
+#[derive(Deserialize, Apiv2Schema)]
+pub struct DeployServicePayload {
+    pub namespace: String,
+    pub service_deployment: String,
+    pub container_name: String,
+    pub version: String
 }
