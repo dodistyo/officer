@@ -90,6 +90,8 @@ pipeline {
                 --context=`pwd` \
                 --destination=${DOCKER_REGISTRY}/${IMAGE_NAME}:${SHORT_COMMIT_HASH} \
                 --tar-path=image.tar \
+                --cache=true \
+                --cache-repo=asia-southeast2-docker.pkg.dev/ihc-dto-corp/kaniko-cache \
                 --no-push
                 """
               // End of custom command
