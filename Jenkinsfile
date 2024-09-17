@@ -12,7 +12,7 @@ pipeline {
       effect: "NoSchedule"
     containers:
     - name: jenkins-standard-agent
-      image: asia-southeast2-docker.pkg.dev/medinesia-dev/devops/jenkins-agent:latest
+      image: asia-southeast2-docker.pkg.dev/ihc-dto-corp/devops/jenkins-agent:latest
       imagePullPolicy: Always
       command:
       - cat
