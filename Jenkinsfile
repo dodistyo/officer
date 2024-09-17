@@ -32,10 +32,10 @@ pipeline {
       resources:
         requests:
           cpu: 500m
-          memory: 512Mi
+          memory: 4Gi
         limits:
-          cpu: 1000m
-          memory: 2Gi
+          cpu: 1500m
+          memory: 6Gi
     - name: krane
       image: gcr.io/go-containerregistry/krane:debug
       command:
