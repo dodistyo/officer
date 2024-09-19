@@ -143,17 +143,20 @@ pipeline {
             try {
               updateGitlabCommitStatus name: 'push', state: 'running'
               // Custom command here: 
-                // Build Docker image and tag it
+              // Build Docker image and tag it
+              if (env.GIT_BRANCH.startsWith('refs/tags/')) {
+                  def tagName = env.GIT_BRANCH.replace('refs/tags/', '')
+                  sh """
+                    krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:${tagName}
+                  """
+              }
+
               if (env.BRANCH_NAME == 'main'){
                 sh """
                   krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:${SHORT_COMMIT_HASH}
                   krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
                 """
-              } else if (env.GIT_TAG_NAME != null && env.GIT_TAG_NAME != ''){
-                sh """
-                  krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:${env.GIT_TAG_NAME}
-                """
-              }else if (env.BRANCH_NAME.startsWith('release/')){
+              } else if (env.BRANCH_NAME.startsWith('release/')){
                 // Setting image tag
                 def branchName = env.BRANCH_NAME ?: 'unknown'
                 // Initialize version number
