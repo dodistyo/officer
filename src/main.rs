@@ -31,8 +31,8 @@ async fn main() -> std::io::Result<()> {
         let mut spec = DefaultApiRaw::default();
         spec.info = Info {
             version: "v1.0.1".into(),
-            title: "Officer Service".into(),
-            description: "Serving your needs...".to_string().into(),
+            title: "Officer".into(),
+            description: "At your service".to_string().into(),
             ..Default::default()
         };
         App::new()
