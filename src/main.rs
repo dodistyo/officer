@@ -30,7 +30,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let mut spec = DefaultApiRaw::default();
         spec.info = Info {
-            version: "v1.0.1".into(),
+            version: "v1.0.0".into(),
             title: "Officer".into(),
             description: "At your service, Sir!".to_string().into(),
             ..Default::default()
