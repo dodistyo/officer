@@ -32,7 +32,7 @@ async fn main() -> std::io::Result<()> {
         spec.info = Info {
             version: "v1.0.1".into(),
             title: "Officer".into(),
-            description: "At your service".to_string().into(),
+            description: "At your service, Sir!".to_string().into(),
             ..Default::default()
         };
         App::new()
