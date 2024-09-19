@@ -1,5 +1,5 @@
-use actix_web::{middleware::from_fn, App, HttpServer};
-use paperclip::actix::{web::{self}, OpenApiExt};
+use actix_web::{middleware::from_fn, App, HttpResponse, HttpServer, Responder, web as actweb};
+use paperclip::{actix::{web::{self}, OpenApiExt}, v2::models::{DefaultApiRaw, Info}};
 use middleware::auth::auth_middleware;
 use env_logger;
 use dotenv::dotenv;
@@ -10,6 +10,10 @@ mod handler;
 mod config;
 mod model;
 mod util;
+
+async fn healthz() -> impl Responder {
+    HttpResponse::Ok().body("ok")
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -23,14 +27,26 @@ async fn main() -> std::io::Result<()> {
     }
     // end of initialize
 
-    HttpServer::new(|| App::new()
+    HttpServer::new(move || {
+        let mut spec = DefaultApiRaw::default();
+        spec.info = Info {
+            version: "v1.0.1".into(),
+            title: "Officer Service".into(),
+            description: "Serving your needs...".to_string().into(),
+            ..Default::default()
+        };
+        App::new()
+        .service(
+            actweb::resource("/healthz")
+            .route(actweb::get().to(healthz))
+        )
         .service(
             web::resource("/isolate-pod")
                 .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::isolate_pod))
         )
         // Record services and routes from this line.
-        .wrap_api()
+        .wrap_api_with_spec(spec)
         // Add routes like you normally do...
         .service(
             web::resource("/deploy-service")
@@ -71,6 +87,7 @@ async fn main() -> std::io::Result<()> {
         // IMPORTANT: Build the app!
         // .wrap(Logger::default())
         .build()
+    }
     ).bind("0.0.0.0:8000")?
     .run().await
 }
