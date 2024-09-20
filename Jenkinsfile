@@ -139,7 +139,6 @@ pipeline {
     }
     stage('push') {
       steps {
-        def gitTag=sh(returnStdout: true, script: "git describe --tags ${SHORT_COMMIT_HASH}").trim()
         container('krane') {
           script {
             try {
@@ -151,7 +150,6 @@ pipeline {
                     krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:${env.GIT_TAG}
                   """
               }
-
               if (env.BRANCH_NAME == 'main'){
                 sh """
                   krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:${SHORT_COMMIT_HASH}
