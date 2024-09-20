@@ -148,7 +148,7 @@ pipeline {
               updateGitlabCommitStatus name: 'push', state: 'running'
               // Custom command here: 
               // Build Docker image and tag it
-              if (env.GIT_TAG != '' || env.GIT_TAG != null) {
+              if (env.GIT_TAG != null) {
                   sh """
                     krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:${env.GIT_TAG}
                   """
