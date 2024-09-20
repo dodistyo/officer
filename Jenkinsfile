@@ -59,6 +59,7 @@ pipeline {
     DOCKER_REGISTRY = 'asia-southeast2-docker.pkg.dev/ihc-dto-corp/devops'
     IMAGE_NAME = 'officer'
     SHORT_COMMIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+    GIT_TAG = sh(returnStdout: true, script: "git describe --tags ${SHORT_COMMIT_HASH}").trim()
     VERSION_NUMBER = 'unknown'
   }
   stages {
@@ -138,16 +139,16 @@ pipeline {
     }
     stage('push') {
       steps {
+        def gitTag=sh(returnStdout: true, script: "git describe --tags ${SHORT_COMMIT_HASH}").trim()
         container('krane') {
           script {
             try {
               updateGitlabCommitStatus name: 'push', state: 'running'
               // Custom command here: 
               // Build Docker image and tag it
-              if (env.GIT_BRANCH.startsWith('refs/tags/')) {
-                  def tagName = env.GIT_BRANCH.replace('refs/tags/', '')
+              if (env.GIT_TAG != '') {
                   sh """
-                    krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:${tagName}
+                    krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:${env.GIT_TAG}
                   """
               }
 
