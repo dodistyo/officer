@@ -59,7 +59,7 @@ pipeline {
     DOCKER_REGISTRY = 'asia-southeast2-docker.pkg.dev/ihc-dto-corp/devops'
     IMAGE_NAME = 'officer'
     SHORT_COMMIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-    GIT_TAG = sh(returnStdout: true, script: "git describe --tags ${SHORT_COMMIT_HASH}").trim()
+    GIT_TAG = sh(script: "git describe --tags ${SHORT_COMMIT_HASH}").trim()
     VERSION_NUMBER = 'unknown'
   }
   stages {
