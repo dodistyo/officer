@@ -1,9 +1,10 @@
+use actix_session::{SessionMiddleware, storage::CookieSessionStore};
 use actix_web::{middleware::from_fn, App, HttpResponse, HttpServer, Responder, web as actweb};
 use paperclip::{actix::{web::{self}, OpenApiExt}, v2::models::{DefaultApiRaw, Info}};
 use middleware::auth::auth_middleware;
 use env_logger;
 use dotenv::dotenv;
-use config::get_envar;
+use config::{get_envar, get_officer_secret_key};
 
 mod middleware;
 mod handler;
@@ -20,7 +21,14 @@ async fn main() -> std::io::Result<()> {
     // initialize
     dotenv().ok();
     env_logger::init();
-    let required_vars = ["API_KEY", "RUST_LOG"];
+    let required_vars = [
+        "API_KEY",
+        "RUST_LOG",
+        "OAUTH2_GITLAB_URL",
+        "OAUTH2_GITLAB_CLIENT_ID",
+        "OAUTH2_GITLAB_CLIENT_SECRET",
+        "OAUTH2_REDIRECT_URL"
+        ];
     // Check each required environment variable
     for &var in required_vars.iter() {
         let _value = get_envar(var);
@@ -28,6 +36,7 @@ async fn main() -> std::io::Result<()> {
     // end of initialize
 
     HttpServer::new(move || {
+        // Setup header swagger
         let mut spec = DefaultApiRaw::default();
         const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
         let app_version = format!("v{}", PKG_VERSION);
@@ -37,11 +46,18 @@ async fn main() -> std::io::Result<()> {
             description: "At your service, Sir!".to_string().into(),
             ..Default::default()
         };
+        // End of setup header swagger
         App::new()
+        // Configure session middleware
+        .wrap(SessionMiddleware::new(
+            CookieSessionStore::default(), get_officer_secret_key().clone())
+        )
         .service(
             actweb::resource("/healthz")
             .route(actweb::get().to(healthz))
         )
+        .route("/gitlab/auth", actweb::get().to(handler::gitlab_oauth2::oauth_login))
+        .route("/gitlab/callback", actweb::get().to(handler::gitlab_oauth2::oauth_callback))
         .service(
             web::resource("/isolate-pod")
                 .wrap(from_fn(auth_middleware))
