@@ -152,8 +152,7 @@ pipeline {
                   sh """
                     krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:${env.GIT_TAG}
                   """
-              }
-              if (env.BRANCH_NAME == 'main'){
+              } else if (env.BRANCH_NAME == 'main'){
                 sh """
                   krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:${SHORT_COMMIT_HASH}
                   krane push image.tar ${DOCKER_REGISTRY}/${IMAGE_NAME}:latest
