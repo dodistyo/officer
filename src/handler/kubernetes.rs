@@ -5,9 +5,11 @@ use k8s_openapi::api::{apps::v1::Deployment, core::v1::Pod};
 use paperclip::actix::{api_v2_operation, web::{Json, Query}};
 use serde_json::{json, Value};
 use crate::{
-    model::kubernetes::{
-        AuthHeader, DeployServicePayload, GetPodQuery, PodInfo, RestartServicePayload, SuccessResponse, UnisolatePodPayload
-    },
+    model::{
+        auth::AuthHeader,
+        kubernetes::{
+        DeployServicePayload, GetPodQuery, PodInfo, RestartServicePayload, SuccessResponse, UnisolatePodPayload
+    }},
     util::time_helper
 };
 
