@@ -2,7 +2,7 @@ use actix_web::{
     body::MessageBody, dev::{ServiceRequest, ServiceResponse}, Error
 };
 // use actix_web_lab::middleware::Next;
-use crate::{config::get_api_key, model::kubernetes::AuthHeader};
+use crate::{config::get_api_key, model::auth::AuthHeader};
 
 use actix_web::middleware::Next;
 
