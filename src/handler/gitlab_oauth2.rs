@@ -6,6 +6,8 @@ use serde::Deserialize;
 use serde_json::json;
 use url::Url;
 
+use crate::util::jwt::create_token;
+
 #[allow(unused)]
 #[derive(Deserialize)]
 pub struct OAuthQuery {
@@ -116,20 +118,30 @@ pub async fn oauth_callback(
         return HttpResponse::BadRequest().body("Invalid CSRF token");
     }
     
-    // Create your oauth client
     let client = gitlab_oauth_client();
 
-    // Build the token request
     let token_request = client.exchange_code(AuthorizationCode::new(query.code.clone()));
 
-    // Send the request using reqwest
     match token_request.request_async(async_http_client).await {
         Ok(token_response) => {
-            // Assuming the access token is in the response
-            let access_token = token_response.access_token().secret();
-            let user_info = read_user("https://git.ihc.id/api/v4", token_response.access_token()).await;
+            let oauth2_gitlab_url = std::env::var("OAUTH2_GITLAB_URL").expect("OAUTH2_GITLAB_URL environment variable not set");
+            let _access_token = token_response.access_token().secret();
+            let user_info = read_user(format!("{}/api/v4", oauth2_gitlab_url).as_str(), token_response.access_token()).await.unwrap();
             info!("{:?}", user_info);
-            HttpResponse::Ok().json(json!({"access_token": access_token}))
+            let users = std::env::var("USERS").expect("USERS environment variable not set");
+            let user_db: Vec<&str> = users.split(',').collect();
+            if user_db.contains(&user_info.email.as_str()) {
+                match create_token(user_info.email.as_str()) {
+                    Ok(jwt) => {
+                        HttpResponse::Ok().json(json!({"token": jwt}))
+                    }
+                    // Ok(Json(AuthResponse { token: jwt })),
+                    Err(_) => HttpResponse::InternalServerError().json(json!({"error": "Invalid credential!"}))
+                }
+            } else {
+                HttpResponse::InternalServerError().json(json!({"error": "Invalid credential!"}))
+            }
+            
         }
         Err(e) => {
             error!("Failed to exchange code for token: {}", e);

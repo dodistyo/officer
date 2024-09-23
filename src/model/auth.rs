@@ -5,24 +5,50 @@ use paperclip::actix::Apiv2Security;
 #[derive(Apiv2Security)]
 #[openapi(
   apiKey,
+  alias = "jwt",
   in = "header",
-  name = "x-api-key",
+  name = "Authorization",
+  description = "JWT Auth"
+)]
+pub struct AuthJwtHeader(pub String);
+#[derive(Apiv2Security)]
+#[openapi(
+  apiKey,
+  alias = "api-key",
+  in = "header",
+  name = "X-API-KEY",
   description = "API key"
 )]
-pub struct AuthHeader(pub String);
+pub struct ApiKeyHeader(pub String);
 
-impl FromRequest for AuthHeader {
+impl FromRequest for ApiKeyHeader {
     type Error = Error;
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
         // Extract the custom header value from the request
-        if let Some(header_value) = req.headers().get("x-api-key") {
+        if let Some(header_value) = req.headers().get("X-API-KEY") {
             if let Ok(header_str) = header_value.to_str() {
-                return ready(Ok(AuthHeader(header_str.to_string())));
+                return ready(Ok(ApiKeyHeader(header_str.to_string())));
             }
         }
         // If the header is not present or not valid, return an error
-        ready(Err(actix_web::error::ErrorUnauthorized("Unauthorized")))
+        ready(Ok(ApiKeyHeader("".to_owned())))
+    }
+}
+
+impl FromRequest for AuthJwtHeader {
+    type Error = Error;
+    type Future = Ready<Result<Self, Self::Error>>;
+
+    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
+        // Extract the custom header value from the request
+        if let Some(header_value) = req.headers().get("Authorization") {
+            if let Ok(header_str) = header_value.to_str() {
+                return ready(Ok(AuthJwtHeader(header_str.to_string())));
+            }
+        }
+        // If the header is not present or not valid, return an error
+        ready(Ok(AuthJwtHeader("".to_owned())))
     }
 }

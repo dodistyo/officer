@@ -24,6 +24,7 @@ async fn main() -> std::io::Result<()> {
     let required_vars = [
         "API_KEY",
         "RUST_LOG",
+        "USERS",
         "OAUTH2_GITLAB_URL",
         "OAUTH2_GITLAB_CLIENT_ID",
         "OAUTH2_GITLAB_CLIENT_SECRET",

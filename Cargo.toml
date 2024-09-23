@@ -18,4 +18,5 @@ futures = "0.3.30"
 url = "2.5.2"
 oauth2 = "4.4.2"
 actix-session = { version = "0.10.1", features = ["cookie-session"] }
+jsonwebtoken = "9.3.0"
 
