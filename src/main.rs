@@ -44,7 +44,8 @@ async fn main() -> std::io::Result<()> {
         spec.info = Info {
             version: app_version.into(),
             title: "Officer".into(),
-            description: "At your service, Sir!".to_string().into(),
+            description: "<b>At your service, Sir!</b> <br><br>\
+            <a href=\"/gitlab/auth\" target=\"_blank\">Sign in with GitLab</a>".to_string().into(),
             ..Default::default()
         };
         // End of setup header swagger
