@@ -127,7 +127,7 @@ pub async fn oauth_callback(
             let oauth2_gitlab_url = std::env::var("OAUTH2_GITLAB_URL").expect("OAUTH2_GITLAB_URL environment variable not set");
             let _access_token = token_response.access_token().secret();
             let user_info = read_user(format!("{}/api/v4", oauth2_gitlab_url).as_str(), token_response.access_token()).await.unwrap();
-            info!("{:?}", user_info);
+            // info!("{:?}", user_info);
             let users = std::env::var("USERS").expect("USERS environment variable not set");
             let user_db: Vec<&str> = users.split(',').collect();
             if user_db.contains(&user_info.email.as_str()) {

@@ -1,5 +1,5 @@
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
-use actix_web::{middleware::from_fn, App, HttpResponse, HttpServer, Responder, web as actweb};
+use actix_web::{middleware::{from_fn, Logger}, web as actweb, App, HttpResponse, HttpServer, Responder};
 use paperclip::{actix::{web::{self}, OpenApiExt}, v2::models::{DefaultApiRaw, Info}};
 use middleware::auth::auth_middleware;
 use env_logger;
@@ -35,7 +35,6 @@ async fn main() -> std::io::Result<()> {
         let _value = get_envar(var);
     }
     // end of initialize
-
     HttpServer::new(move || {
         // Setup header swagger
         let mut spec = DefaultApiRaw::default();
@@ -44,7 +43,8 @@ async fn main() -> std::io::Result<()> {
         spec.info = Info {
             version: app_version.into(),
             title: "Officer".into(),
-            description: "At your service, Sir!".to_string().into(),
+            description: "<b>At your service, Sir!</b> <br><br>\
+            <a href=\"/gitlab/auth\" target=\"_blank\">Sign in with GitLab</a>".to_string().into(),
             ..Default::default()
         };
         // End of setup header swagger
@@ -66,6 +66,7 @@ async fn main() -> std::io::Result<()> {
         )
         // Record services and routes from this line.
         .wrap_api_with_spec(spec)
+        .wrap(Logger::default())
         // Add routes like you normally do...
         .service(
             web::resource("/deploy-service")

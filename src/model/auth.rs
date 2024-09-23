@@ -5,16 +5,16 @@ use paperclip::actix::Apiv2Security;
 #[derive(Apiv2Security)]
 #[openapi(
   apiKey,
-  alias = "jwt",
+  alias = "JWT Token",
   in = "header",
   name = "Authorization",
-  description = "JWT Auth"
+  description = "JWT Auth, example: \"Bearer thetoken\""
 )]
 pub struct AuthJwtHeader(pub String);
 #[derive(Apiv2Security)]
 #[openapi(
   apiKey,
-  alias = "api-key",
+  alias = "API Key",
   in = "header",
   name = "X-API-KEY",
   description = "API key"

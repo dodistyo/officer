@@ -1,6 +1,7 @@
 use actix_web::{
     body::MessageBody, dev::{ServiceRequest, ServiceResponse}, Error
 };
+use log::info;
 // use actix_web_lab::middleware::Next;
 use crate::{config::get_api_key, model::auth::{ApiKeyHeader, AuthJwtHeader}, util::jwt::validate_token};
 
@@ -26,7 +27,10 @@ pub async fn auth_middleware(
             return Err(actix_web::error::ErrorUnauthorized("Invalid Token!")); // Handle the error case
         };
         match validate_token(token) {
-            Ok(_) => Ok(res),
+            Ok(token) => {
+                info!("User: {}", token.claims.sub);
+                Ok(res)
+            },
             Err(_) => Err(actix_web::error::ErrorUnauthorized("Invalid API key")),
         }
     } else {
