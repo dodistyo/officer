@@ -28,7 +28,8 @@ async fn main() -> std::io::Result<()> {
         "OAUTH2_GITLAB_URL",
         "OAUTH2_GITLAB_CLIENT_ID",
         "OAUTH2_GITLAB_CLIENT_SECRET",
-        "OAUTH2_REDIRECT_URL"
+        "OAUTH2_REDIRECT_URL",
+        "OFFICER_SECRET_KEY"
         ];
     // Check each required environment variable
     for &var in required_vars.iter() {
