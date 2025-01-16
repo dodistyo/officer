@@ -17,6 +17,7 @@ pub struct UnisolatePodPayload {
 pub struct PodInfo {
     pub name: String,
     pub status: String,
+    pub images: Vec<String>,
     pub age: String
 }
 

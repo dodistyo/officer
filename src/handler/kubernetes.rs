@@ -30,11 +30,10 @@ pub async fn get_pod(_: ApiKeyHeader,  _: AuthJwtHeader, query: Query<GetPodQuer
 
     // Create an API handle for Pod resources
     let pods: Api<Pod> = Api::namespaced(client, &namespace);
-
+    let now = Utc::now();
     // List pods with default parameters
     match pods.list(&ListParams::default()).await {
         Ok(pod_list) => {
-            let now = Utc::now();
             let pod_info: Vec<PodInfo> = pod_list.items.into_iter().map(|p| {
                 let name = p.metadata.name.unwrap_or_default();
                 let status = p.status.as_ref().and_then(|status| status.phase.clone()).unwrap_or_else(|| "Unknown".to_string());
@@ -47,12 +46,19 @@ pub async fn get_pod(_: ApiKeyHeader,  _: AuthJwtHeader, query: Query<GetPodQuer
                 
                 // Calculate the age
                 let age_duration = now.signed_duration_since(creation_time).num_seconds();
+                // Format the duration into a human-readable string
                 let age = time_helper::format_duration(age_duration);
-                
+
+                // Collect container images
+                let images = p.spec.as_ref().map_or(vec![], |spec| {
+                    spec.containers.iter().map(|c| c.image.clone().unwrap_or_default()).collect()
+                });
+
                 PodInfo {
                     name,
                     status,
                     age,
+                    images,
                 }
             }).collect();
 
