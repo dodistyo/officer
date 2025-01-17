@@ -44,7 +44,7 @@ async fn main() -> std::io::Result<()> {
         spec.info = Info {
             version: app_version.into(),
             title: "Officer".into(),
-            description: "<b>All Hands on Deck, At Your Service!</b> <br><br>\
+            description: "<b>Serving Your Operational Needs</b> <br><br>\
             <a href=\"/gitlab/auth\" target=\"_blank\">Sign in with GitLab</a>".to_string().into(),
             ..Default::default()
         };
