@@ -106,7 +106,7 @@ async fn main() -> std::io::Result<()> {
         //     }))
         // })
         // IMPORTANT: Build the app!
-        // .wrap(Logger::default())
+        .wrap(Logger::default())
         .build()
     }
     ).bind("0.0.0.0:8000")?
