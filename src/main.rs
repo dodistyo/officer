@@ -94,7 +94,7 @@ async fn main() -> std::io::Result<()> {
         // .with_json_spec_at("/api/spec/v2")
         // If you added the "v3" feature, you can also include
         .with_json_spec_v3_at("/officer/api/spec/v3")
-        .with_swagger_ui_at("/officer/api/docs")
+        .with_swagger_ui_at("/api/docs")
         // ... or if you wish to build the spec by yourself...
 
         // .with_raw_json_spec(|app, spec| {
