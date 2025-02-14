@@ -45,7 +45,7 @@ async fn main() -> std::io::Result<()> {
             version: app_version.into(),
             title: "Officer".into(),
             description: "<b>Serving Your Operational Needs</b> <br><br>\
-            <a href=\"/gitlab/auth\" target=\"_blank\">Sign in with GitLab</a>".to_string().into(),
+            <a href=\"/officer/gitlab/auth\" target=\"_blank\">Sign in with GitLab</a>".to_string().into(),
             ..Default::default()
         };
         // End of setup header swagger
@@ -54,6 +54,11 @@ async fn main() -> std::io::Result<()> {
         .wrap(SessionMiddleware::new(
             CookieSessionStore::default(), get_officer_secret_key().clone())
         )
+        .route("/", actweb::get().to(|| async {
+            HttpResponse::Found()
+                .append_header(("Location", "/officer/api/docs/index.html?url=/officer/api/spec/v3"))
+                .finish()
+        }))
         .service(
             actweb::resource("/healthz")
             .route(actweb::get().to(healthz))
