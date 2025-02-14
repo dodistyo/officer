@@ -45,7 +45,7 @@ async fn main() -> std::io::Result<()> {
             version: app_version.into(),
             title: "Officer".into(),
             description: "<b>Serving Your Operational Needs</b> <br><br>\
-            <a href=\"/officer/gitlab/auth\" target=\"_blank\">Sign in with GitLab</a>".to_string().into(),
+            <a href=\"/gitlab/auth\" target=\"_blank\">Sign in with GitLab</a>".to_string().into(),
             ..Default::default()
         };
         // End of setup header swagger
@@ -55,11 +55,11 @@ async fn main() -> std::io::Result<()> {
             CookieSessionStore::default(), get_officer_secret_key().clone())
         )
         .service(
-            actweb::resource("/officer/healthz")
+            actweb::resource("/healthz")
             .route(actweb::get().to(healthz))
         )
-        .route("/officer/gitlab/auth", actweb::get().to(handler::gitlab_oauth2::oauth_login))
-        .route("/officer/gitlab/callback", actweb::get().to(handler::gitlab_oauth2::oauth_callback))
+        .route("/gitlab/auth", actweb::get().to(handler::gitlab_oauth2::oauth_login))
+        .route("/gitlab/callback", actweb::get().to(handler::gitlab_oauth2::oauth_callback))
         .service(
             web::resource("/isolate-pod")
                 .wrap(from_fn(auth_middleware))
@@ -70,22 +70,22 @@ async fn main() -> std::io::Result<()> {
         .wrap(Logger::default())
         // Add routes like you normally do...
         .service(
-            web::resource("/officer/deploy-service")
+            web::resource("/deploy-service")
                 .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::deploy_service))
         )
         .service(
-            web::resource("/officer/get-pod")
+            web::resource("/get-pod")
                 .wrap(from_fn(auth_middleware))
                 .route(web::get().to(handler::kubernetes::get_pod))
         )
         .service(
-            web::resource("/officer/unisolate-pod")
+            web::resource("/unisolate-pod")
                 .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::unisolate_pod))
         )
         .service(
-            web::resource("/officer/restart-service-deployment")
+            web::resource("/restart-service-deployment")
                 .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::restart_service_deployment))
         )
@@ -93,8 +93,8 @@ async fn main() -> std::io::Result<()> {
         // Mount the v2/Swagger JSON spec at this path.
         // .with_json_spec_at("/api/spec/v2")
         // If you added the "v3" feature, you can also include
-        .with_json_spec_v3_at("/officer/api/spec/v3")
-        .with_swagger_ui_at("/officer/api/docs")
+        .with_json_spec_v3_at("/api/spec/v3")
+        .with_swagger_ui_at("/api/docs")
         // ... or if you wish to build the spec by yourself...
 
         // .with_raw_json_spec(|app, spec| {
