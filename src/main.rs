@@ -48,6 +48,7 @@ async fn main() -> std::io::Result<()> {
             <a href=\"/officer/gitlab/auth\" target=\"_blank\">Sign in with GitLab</a>".to_string().into(),
             ..Default::default()
         };
+        spec.base_path = "/officer".to_string().into();
         // End of setup header swagger
         App::new()
         // Configure session middleware
