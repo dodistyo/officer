@@ -48,7 +48,7 @@ async fn main() -> std::io::Result<()> {
             <a href=\"/officer/gitlab/auth\" target=\"_blank\">Sign in with GitLab</a>".to_string().into(),
             ..Default::default()
         };
-        spec.base_path = "/officer".to_string().into();
+        // spec.base_path = "/officer".to_string().into();
         // End of setup header swagger
         App::new()
         // Configure session middleware
@@ -71,10 +71,6 @@ async fn main() -> std::io::Result<()> {
                 .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::isolate_pod))
         )
-        // Record services and routes from this line.
-        .wrap_api_with_spec(spec)
-        .wrap(Logger::default())
-        // Add routes like you normally do...
         .service(
             web::resource("/deploy-service")
                 .wrap(from_fn(auth_middleware))
@@ -99,6 +95,7 @@ async fn main() -> std::io::Result<()> {
         // Mount the v2/Swagger JSON spec at this path.
         // .with_json_spec_at("/api/spec/v2")
         // If you added the "v3" feature, you can also include
+        .wrap_api_with_spec(spec)
         .with_json_spec_v3_at("/api/spec/v3")
         .with_swagger_ui_at("/api/docs")
         // ... or if you wish to build the spec by yourself...

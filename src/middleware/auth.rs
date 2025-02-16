@@ -13,6 +13,11 @@ pub async fn auth_middleware(
     req: ServiceRequest,
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
+    // Log all headers
+    for (header_name, header_value) in req.headers().iter() {
+        info!("Header: {}: {:?}", header_name, header_value);
+    }
+
     // pre-processing
     let api_key_env = get_api_key();
     let api_key = api_key_header.0.as_str();
@@ -45,5 +50,4 @@ pub async fn auth_middleware(
 
         Ok(res)
     }
-    
 }
