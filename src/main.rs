@@ -68,7 +68,7 @@ async fn main() -> std::io::Result<()> {
         .route("/gitlab/callback", actweb::get().to(handler::gitlab_oauth2::oauth_callback))
         .service(
             web::resource("/isolate-pod")
-                .wrap(from_fn(auth_middleware))
+                // .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::isolate_pod))
         )
         // Record services and routes from this line.
@@ -76,22 +76,22 @@ async fn main() -> std::io::Result<()> {
         // Add routes like you normally do...
         .service(
             web::resource("/deploy-service")
-                .wrap(from_fn(auth_middleware))
+                // .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::deploy_service))
         )
         .service(
             web::resource("/get-pod")
-                .wrap(from_fn(auth_middleware))
+                // .wrap(from_fn(auth_middleware))
                 .route(web::get().to(handler::kubernetes::get_pod))
         )
         .service(
             web::resource("/unisolate-pod")
-                .wrap(from_fn(auth_middleware))
+                // .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::unisolate_pod))
         )
         .service(
             web::resource("/restart-service-deployment")
-                .wrap(from_fn(auth_middleware))
+                // .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::restart_service_deployment))
         )
         // Or just .service(echo_pet) if you're using the macro syntax
