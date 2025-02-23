@@ -1,9 +1,10 @@
-use std::{env, sync::Mutex};
+use std::{env, sync::Mutex, thread::sleep};
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, TokenData, Validation};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use dotenv::dotenv;
 use once_cell::sync::Lazy;
+use std::time::Duration;
 
 static VERIFICATION_KEY_CACHE: Lazy<Mutex<Option<DecodingKey>>> = Lazy::new(|| {
     Mutex::new(None)
@@ -35,15 +36,32 @@ fn get_jwks_url() -> String {
 
 async fn fetch_jwks(jwks_url: &str) -> Result<Jwks, Box<dyn std::error::Error>> {
     let client = Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
+        .timeout(Duration::from_secs(5))
         .build()?;
     
     println!("Fetching JWKS from URL: {}", jwks_url);
-    
-    let response = client.get(jwks_url).send().await?;
-    let jwks: Jwks = response.json().await?;
-    
-    Ok(jwks)
+
+    let mut retries = 3;
+    while retries > 0 {
+        let response = client.get(jwks_url).send().await;
+        match response {
+            Ok(resp) => {
+                let jwks: Jwks = resp.json().await?;
+                return Ok(jwks);
+            }
+            Err(err) => {
+                println!("Failed to fetch JWKS: {:?}", err);
+                retries -= 1;
+                if retries > 0 {
+                    sleep(Duration::from_secs(2));
+                } else {
+                    return Err(Box::new(err));
+                }
+            }
+        }
+    }
+
+    Err("Failed to fetch JWKS after retries".into())
 }
 
 fn construct_verification_key(jwks: &Jwks, kid: &str) -> Option<DecodingKey> {
