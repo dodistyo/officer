@@ -15,7 +15,6 @@ mod util;
 async fn healthz() -> impl Responder {
     HttpResponse::Ok().body("ok")
 }
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // initialize
@@ -25,10 +24,6 @@ async fn main() -> std::io::Result<()> {
         "API_KEY",
         "RUST_LOG",
         "USERS",
-        "OAUTH2_GITLAB_URL",
-        "OAUTH2_GITLAB_CLIENT_ID",
-        "OAUTH2_GITLAB_CLIENT_SECRET",
-        "OAUTH2_REDIRECT_URL",
         "OFFICER_SECRET_KEY"
         ];
     // Check each required environment variable
@@ -45,10 +40,10 @@ async fn main() -> std::io::Result<()> {
             version: app_version.into(),
             title: "Officer".into(),
             description: "<b>Serving Your Operational Needs</b> <br><br>\
-            <a href=\"/officer/gitlab/auth\" target=\"_blank\">Sign in with GitLab</a>".to_string().into(),
+            <a href=\"/auth/oidc\" target=\"_blank\">Sign in SSO</a>".to_string().into(),
             ..Default::default()
         };
-        spec.base_path = "/officer".to_string().into();
+        // spec.base_path = "/officer".to_string().into();
         // End of setup header swagger
         App::new()
         // Configure session middleware
@@ -64,8 +59,13 @@ async fn main() -> std::io::Result<()> {
             actweb::resource("/healthz")
             .route(actweb::get().to(healthz))
         )
-        .route("/gitlab/auth", actweb::get().to(handler::gitlab_oauth2::oauth_login))
-        .route("/gitlab/callback", actweb::get().to(handler::gitlab_oauth2::oauth_callback))
+        .service(
+            actweb::resource("/private")
+            .wrap(from_fn(auth_middleware))
+            .route(actweb::get().to(healthz))
+        )
+        .route("/auth/oidc", actweb::get().to(handler::oidc::oauth2_login))
+        .route("/auth/oidc/callback", actweb::get().to(handler::oidc::oauth2_callback))
         .service(
             web::resource("/isolate-pod")
                 // .wrap(from_fn(auth_middleware))
@@ -75,23 +75,23 @@ async fn main() -> std::io::Result<()> {
         .wrap_api_with_spec(spec)
         // Add routes like you normally do...
         .service(
-            web::resource("/deploy-service")
-                // .wrap(from_fn(auth_middleware))
-                .route(web::post().to(handler::kubernetes::deploy_service))
-        )
-        .service(
             web::resource("/get-pod")
-                // .wrap(from_fn(auth_middleware))
+                .wrap(from_fn(auth_middleware))
                 .route(web::get().to(handler::kubernetes::get_pod))
         )
         .service(
+            web::resource("/deploy-service")
+                .wrap(from_fn(auth_middleware))
+                .route(web::post().to(handler::kubernetes::deploy_service))
+        )
+        .service(
             web::resource("/unisolate-pod")
-                // .wrap(from_fn(auth_middleware))
+                .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::unisolate_pod))
         )
         .service(
             web::resource("/restart-service-deployment")
-                // .wrap(from_fn(auth_middleware))
+                .wrap(from_fn(auth_middleware))
                 .route(web::post().to(handler::kubernetes::restart_service_deployment))
         )
         // Or just .service(echo_pet) if you're using the macro syntax

@@ -14,9 +14,9 @@ pub async fn auth_middleware(
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, Error> {
     // Log all headers
-    for (header_name, header_value) in req.headers().iter() {
-        info!("Header: {}: {:?}", header_name, header_value);
-    }
+    // for (header_name, header_value) in req.headers().iter() {
+    //     info!("Header: {}: {:?}", header_name, header_value);
+    // }
 
     // pre-processing
     let api_key_env = get_api_key();
@@ -29,14 +29,17 @@ pub async fn auth_middleware(
         let token = if jwt.starts_with("Bearer ") {
             &jwt["Bearer ".len()..]
         } else {
-            return Err(actix_web::error::ErrorUnauthorized("Invalid Token!")); // Handle the error case
+            return Err(actix_web::error::ErrorUnauthorized("Invalid Bearer Token!")); // Handle the error case
         };
-        match validate_token(token) {
+        println!("Token here: {:?}", token);
+
+        match validate_token(token).await {
             Ok(token) => {
+                println!("Token hore: {:?}", token);
                 info!("User: {}", token.claims.sub);
                 Ok(res)
             },
-            Err(_) => Err(actix_web::error::ErrorUnauthorized("Invalid API key")),
+            Err(_) => Err(actix_web::error::ErrorUnauthorized("Invalid Token")),
         }
     } else {
         // Check API key
