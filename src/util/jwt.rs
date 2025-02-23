@@ -13,6 +13,8 @@ static VERIFICATION_KEY_CACHE: Lazy<Mutex<Option<DecodingKey>>> = Lazy::new(|| {
 pub struct Claims {
     pub sub: String,
     pub name: String,
+    pub ipaddr: String,
+    pub upn: String,
     pub exp: usize,
 }
 #[derive(Debug, Serialize, Deserialize)]
@@ -73,7 +75,6 @@ fn construct_verification_key(jwks: &Jwks, kid: &str) -> Option<DecodingKey> {
     None
 }
 async fn retrieve_verification_key(token: &str) -> Result<DecodingKey, Box<dyn std::error::Error>> {
-    // let verification_key_cache = VERIFICATION_KEY_CACHE.read().map_err(|_| "Failed to acquire read lock")?;
     let mut verification_key_cache = VERIFICATION_KEY_CACHE.lock().map_err(|_| "Failed to acquire lock")?;
     if verification_key_cache.is_none() {
         let header = decode_header(token)?;
@@ -106,9 +107,6 @@ async fn retrieve_verification_key(token: &str) -> Result<DecodingKey, Box<dyn s
     } else {
         Ok(verification_key_cache.clone().unwrap())
     }
-    // } else {
-    //     Ok(verification_key_cache.clone().unwrap())
-    // }
 }
 
 // Validate a JWT token

@@ -5,14 +5,14 @@ use actix_session::Session;
 use serde::Deserialize;
 use serde_json::json;
 
-#[allow(unused)]
+use crate::util::jwt::validate_token;
+
 #[derive(Deserialize)]
 pub struct OAuthQuery {
     pub code: String,
     pub state: String,
 }
 
-#[allow(unused)]
 #[derive(Deserialize, Debug)]
 pub struct Identity {
     #[allow(unused)]
@@ -88,7 +88,14 @@ pub async fn oauth2_callback(
     match token_request.request_async(async_http_client).await {
         Ok(token_response) => {
             let access_token = token_response.access_token().secret();
-            HttpResponse::Ok().json(json!({"token": access_token}))
+            let token_data = validate_token(&access_token).await.unwrap();
+            let users = std::env::var("USERS").expect("USERS environment variable not set");
+            let user_db: Vec<&str> = users.split(',').collect();
+            if user_db.contains(&token_data.claims.upn.as_str()) {
+               HttpResponse::Ok().json(json!({"token": access_token}))
+            } else {
+                HttpResponse::Unauthorized().json(json!({"error": "Unauthorized!"}))
+            }
         }
         Err(e) => {
             error!("Failed to exchange code for token: {}", e);

@@ -46,9 +46,6 @@ pub async fn auth_middleware(
         }
         // invoke the wrapped middleware or service
         let res = next.call(req).await?;
-
-        // post-processing
-
         Ok(res)
     }
 }
