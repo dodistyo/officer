@@ -31,12 +31,10 @@ pub async fn auth_middleware(
         } else {
             return Err(actix_web::error::ErrorUnauthorized("Invalid Bearer Token!")); // Handle the error case
         };
-        println!("Token here: {:?}", token);
 
         match validate_token(token).await {
             Ok(token) => {
-                println!("Token hore: {:?}", token);
-                info!("User: {}", token.claims.sub);
+                info!("User: {}", token.claims.name);
                 Ok(res)
             },
             Err(_) => Err(actix_web::error::ErrorUnauthorized("Invalid Token")),
