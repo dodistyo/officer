@@ -15,6 +15,7 @@ mod util;
 async fn healthz() -> impl Responder {
     HttpResponse::Ok().body("ok")
 }
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // initialize
@@ -25,11 +26,15 @@ async fn main() -> std::io::Result<()> {
         "RUST_LOG",
         "USERS",
         "OFFICER_SECRET_KEY"
-        ];
+    ];
     // Check each required environment variable
     for &var in required_vars.iter() {
         let _value = get_envar(var);
     }
+
+    // Define SERVICE_PREFIX_PATH
+    let service_prefix_path = std::env::var("SERVICE_PREFIX_PATH").unwrap_or_else(|_| "".to_string());
+
     // end of initialize
     HttpServer::new(move || {
         // Setup header swagger
@@ -43,18 +48,24 @@ async fn main() -> std::io::Result<()> {
             <a href=\"/auth/oidc\" target=\"_blank\">Sign in SSO</a>".to_string().into(),
             ..Default::default()
         };
-        // spec.base_path = "/officer".to_string().into();
+        spec.base_path = Some(service_prefix_path.clone().to_string().into());
         // End of setup header swagger
         App::new()
         // Configure session middleware
         .wrap(SessionMiddleware::new(
             CookieSessionStore::default(), get_officer_secret_key().clone())
         )
-        .route("/", actweb::get().to(|| async {
-            HttpResponse::Found()
-                .append_header(("Location", "/officer/api/docs/index.html?url=/officer/api/spec/v3"))
-                .finish()
-        }))
+        .route("/", {
+            let service_prefix_path = service_prefix_path.clone();
+            actweb::get().to(move || {
+                let service_prefix_path = service_prefix_path.clone();
+                async move {
+                    HttpResponse::Found()
+                        .append_header(("Location", format!("{0}/api/docs/index.html?url={0}/api/spec/v3", service_prefix_path)))
+                        .finish()
+                }
+            })
+        })
         .service(
             actweb::resource("/healthz")
             .route(actweb::get().to(healthz))
@@ -98,8 +109,12 @@ async fn main() -> std::io::Result<()> {
         // Mount the v2/Swagger JSON spec at this path.
         // .with_json_spec_at("/api/spec/v2")
         // If you added the "v3" feature, you can also include
+
+        // .with_json_spec_v3_at(&format!("{0}/api/spec/v3", service_prefix_path.clone()))
+        // .with_swagger_ui_at(&format!("{0}/api/docs", service_prefix_path.clone()))
         .with_json_spec_v3_at("/api/spec/v3")
         .with_swagger_ui_at("/api/docs")
+
         // ... or if you wish to build the spec by yourself...
 
         // .with_raw_json_spec(|app, spec| {
