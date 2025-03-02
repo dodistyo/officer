@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM rust:1.80.1 AS builder
+FROM rust:1.85.0 AS builder
 
 # Install necessary dependencies
 RUN apt-get update && apt-get install -y \
