@@ -2067,7 +2067,6 @@ dependencies = [
  "openssl",
  "paperclip",
  "reqwest 0.12.12",
- "secrecy",
  "serde",
  "serde_json",
  "url",
