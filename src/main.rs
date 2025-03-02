@@ -44,8 +44,8 @@ async fn main() -> std::io::Result<()> {
         spec.info = Info {
             version: app_version.into(),
             title: "Officer".into(),
-            description: "<b>Serving Your Operational Needs</b> <br><br>\
-            <a href=\"/auth/oidc\" target=\"_blank\">Sign in SSO</a>".to_string().into(),
+            description: format!("<b>Serving Your Operational Needs</b> <br><br>\
+            <a href=\"{}/auth/oidc\" target=\"_blank\">Sign in SSO</a>", service_prefix_path).to_string().into(),
             ..Default::default()
         };
         spec.base_path = Some(service_prefix_path.clone().to_string().into());
