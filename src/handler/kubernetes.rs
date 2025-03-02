@@ -1,17 +1,26 @@
 use actix_web::{error::ErrorInternalServerError, Error};
 use chrono::{DateTime, Utc};
-use kube::{api::{ListParams, Patch, PatchParams}, Api, Client};
+use kube::{
+    api::{
+        ListParams, Patch, PatchParams
+    },
+    Api,
+    Client,
+};
 use k8s_openapi::api::{apps::v1::Deployment, core::v1::Pod};
+use log::info;
 use paperclip::actix::{api_v2_operation, web::{Json, Query}};
 use serde_json::{json, Value};
 use crate::{
     model::{
         auth::{ApiKeyHeader, AuthJwtHeader},
         kubernetes::{
-        DeployServicePayload, GetPodQuery, PodInfo, RestartServicePayload, SuccessResponse, UnisolatePodPayload
+        DeployServicePayload, GetPodQuery, PodInfo, RestartServicePayload, SeedServicePayload, SuccessResponse, UnisolatePodPayload
     }},
     util::time_helper
 };
+use std::process::Command;
+
 
 #[api_v2_operation(tags("Kubernetes"))]
 /// Get pods in a namespace 
@@ -160,6 +169,32 @@ pub async fn deploy_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<De
     } else {
         return Err(ErrorInternalServerError(format!("Failed to deploy")))
     }
+}
+
+#[api_v2_operation(tags("Kubernetes"))]
+/// Kubernetes Service Seeding
+///
+/// This api will help you to deploy service in kubernetes
+pub async fn seed_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<SeedServicePayload>) -> Result<Json<SuccessResponse>, Error> {
+    // Get `namespace` and `pod name`
+    let namespace = &payload.namespace;
+
+    let service_deployment = &payload.service_deployment;
+
+    let container_name = &payload.container_name;
+
+    let output = Command::new("kubectl")
+        .args(&["exec", "-n", namespace, &format!("deploy/{}", service_deployment), "-c", &container_name, "--", "whoami"])
+        .output()
+        .expect("Failed to execute kubectl");
+    info!("Executing kubectl: {:?}", output);
+    // Check if the request was successful
+    if output.status.success() {
+        Ok(Json(SuccessResponse { status: format!("Service {} seeded!", service_deployment) }))
+    } else {
+       Err(ErrorInternalServerError(format!("Failed to seed {:?}", output)))
+    }
+   
 }
 
 #[api_v2_operation(tags("Kubernetes Security"))]
