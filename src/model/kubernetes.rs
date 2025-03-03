@@ -35,7 +35,9 @@ pub struct RestartServicePayload {
 pub struct SeedServicePayload {
     pub namespace: String,
     pub service_deployment: String,
-    pub container_name: String
+    pub container_name: String,
+    pub module_name: String,
+    pub class_name: String
 }
 
 #[derive(Deserialize, Apiv2Schema)]

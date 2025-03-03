@@ -178,13 +178,14 @@ pub async fn deploy_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<De
 pub async fn seed_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<SeedServicePayload>) -> Result<Json<SuccessResponse>, Error> {
     // Get `namespace` and `pod name`
     let namespace = &payload.namespace;
-
     let service_deployment = &payload.service_deployment;
-
     let container_name = &payload.container_name;
-
+    let module_name = &payload.module_name;
+    let class_name = &payload.class_name;
+    // Interact with k8s
     let output = Command::new("kubectl")
-        .args(&["exec", "-n", namespace, &format!("deploy/{}", service_deployment), "-c", &container_name, "--", "whoami"])
+        // php artisan module:seed Form --class=FormOptionEWSSeeder
+        .args(&["exec", "-n", namespace, &format!("deploy/{}", service_deployment), "-c", &container_name, "--", "php", "artisan", "module:seed", &module_name, "--class", &class_name])
         .output()
         .expect("Failed to execute kubectl");
     info!("Executing kubectl: {:?}", output);
@@ -194,7 +195,6 @@ pub async fn seed_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<Seed
     } else {
        Err(ErrorInternalServerError(format!("Failed to seed {:?}", output)))
     }
-   
 }
 
 #[api_v2_operation(tags("Kubernetes Security"))]
