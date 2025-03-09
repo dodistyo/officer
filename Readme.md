@@ -31,7 +31,7 @@ This provides an interactive interface to explore and test the available endpoin
    cargo build
    ```
 3. Configure environment variables in `.env` file:
-   ```env
+    ```env
     RUST_LOG=info
     RUST_BACKTRACE=1
     API_KEY=""
@@ -43,15 +43,15 @@ This provides an interactive interface to explore and test the available endpoin
     OAUTH2_JWKS_URL="https://login.microsoftonline.com/<tenant-id>/discovery/v2.0/keys"
     OAUTH2_REDIRECT_URL="http://localhost:8000/auth/oidc/callback"
     USERS="dodiprasetyo@mail.com,dzaka.eryan@mail.com"
-   ```
+    ```
 4. Start the service:
-   ```sh
-   cargo run
-   ```
+    ```sh
+    cargo run
+    ```
    With auto reload:
-   ```sh
+    ```sh
     cargo watch -x run
-   ```
+    ```
 
 ## Container
 
@@ -68,8 +68,3 @@ MIT License
 ## Contributing
 
 Feel free to submit issues or pull requests to improve the service!
-
----
-
-Let me know if you need further customization or additional sections!
-
