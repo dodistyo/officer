@@ -50,9 +50,6 @@ pipeline {
           memory: 256Mi'''
     }
   }
-  options {
-    gitLabConnection('gitlab-connection-ihc')
-  }
 
   // Stages status
   environment {
@@ -64,6 +61,14 @@ pipeline {
                   returnStdout: true
               ).trim()
     VERSION_NUMBER = 'unknown'
+    SERVICE_NAME = ''
+    STAGING_GKE_NAME = ''
+    STAGING_GKE_ZONE = ''
+    STAGING_GCP_PROJECT_ID = ''
+    DEVELOPMENT_GKE_NAME = ''
+    DEVELOPMENT_GKE_ZONE = ''
+    DEVELOPMENT_GCP_PROJECT_ID = ''
+
   }
   stages {
     stage('prerun') {
@@ -88,7 +93,6 @@ pipeline {
         container('kaniko') {
           script {
             try {
-            updateGitlabCommitStatus name: 'build', state: 'running'
              sh """
                 /kaniko/executor --dockerfile=`pwd`/Dockerfile \
                 --context=`pwd` \
@@ -100,18 +104,9 @@ pipeline {
                 """
               // End of custom command
             } catch (Exception e){
-              updateGitlabCommitStatus name: 'build', state: 'failed'
               throw e
             }
           }
-        }
-      }
-      post {
-        success {
-          updateGitlabCommitStatus name: 'build', state: 'success'
-        }
-        aborted {
-          updateGitlabCommitStatus name: 'build', state: 'canceled'
         }
       }
     }
@@ -120,23 +115,13 @@ pipeline {
         container('jenkins-standard-agent') {
           script {
             try {
-              updateGitlabCommitStatus name: 'test', state: 'running'
               // Custom command here: 
               sh 'echo "Skipping test..."'
               // End of custom command
             } catch (Exception e){
-              updateGitlabCommitStatus name: 'test', state: 'failed'
               throw e
             }
           }
-        }
-      }
-      post {
-        success {
-          updateGitlabCommitStatus name: 'test', state: 'success'
-        }
-        aborted {
-          updateGitlabCommitStatus name: 'test', state: 'canceled'
         }
       }
     }
@@ -145,7 +130,6 @@ pipeline {
         container('krane') {
           script {
             try {
-              updateGitlabCommitStatus name: 'push', state: 'running'
               // Custom command here: 
               // Build Docker image and tag it
               if (env.GIT_TAG != null) {
@@ -181,18 +165,9 @@ pipeline {
               sh 'echo "Push finished!"'
               // End of custom command
             } catch (Exception e){
-              updateGitlabCommitStatus name: 'push', state: 'failed'
               throw e
             }
           }
-        }
-      }
-      post {
-        success {
-          updateGitlabCommitStatus name: 'push', state: 'success'
-        }
-        aborted {
-          updateGitlabCommitStatus name: 'push', state: 'canceled'
         }
       }
     }
@@ -207,7 +182,6 @@ pipeline {
         container('jenkins-standard-agent') {
           script {
             try {
-              updateGitlabCommitStatus name: 'deploy', state: 'running'
               // Custom command here:
               if (env.BRANCH_NAME == 'main'){
                 // gcloud config set auth/impersonate_service_account jenkins-agent-gsa@medinesia-prod.iam.gserviceaccount.com
@@ -215,6 +189,7 @@ pipeline {
                 //   gcloud container clusters get-credentials medinesia-prod --region asia-southeast2 --project medinesia-prod && \
                 //   kubectl get nodes
                 // """
+                sh 'echo "Fake deploying!"'
               } else if (env.BRANCH_NAME == 'development'){
                 // sh """
                 //   gcloud container clusters get-credentials medinesia-dev --zone asia-southeast2-c --project medinesia-dev && \
@@ -225,18 +200,9 @@ pipeline {
               }
               // End of custom command
             } catch (Exception e){
-              updateGitlabCommitStatus name: 'deploy', state: 'failed'
               throw e
             }
           }
-        }
-      }
-      post {
-        success {
-          updateGitlabCommitStatus name: 'deploy', state: 'success'
-        }
-        aborted {
-          updateGitlabCommitStatus name: 'deploy', state: 'canceled'
         }
       }
     }
