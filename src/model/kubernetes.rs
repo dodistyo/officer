@@ -8,6 +8,12 @@ pub struct SuccessResponse {
 }
 
 #[derive(Serialize, Deserialize, Apiv2Schema)]
+pub struct SuccessResponseWithOutput {
+    pub status: String,
+    pub output: String,
+}
+
+#[derive(Serialize, Deserialize, Apiv2Schema)]
 pub struct UnisolatePodPayload {
     pub namespace: String,
     pub pod_name: String,

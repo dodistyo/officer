@@ -2,7 +2,7 @@ use actix_web::{error::ErrorInternalServerError, Error};
 use chrono::{DateTime, Utc};
 use kube::{
     api::{
-        ListParams, Patch, PatchParams
+        ListParams, Patch, PatchParams, AttachParams,
     },
     Api,
     Client,
@@ -15,11 +15,11 @@ use crate::{
     model::{
         auth::{ApiKeyHeader, AuthJwtHeader},
         kubernetes::{
-        DeployServicePayload, GetPodQuery, PodInfo, RestartServicePayload, SeedServicePayload, SuccessResponse, UnisolatePodPayload
+        DeployServicePayload, GetPodQuery, PodInfo, RestartServicePayload, SeedServicePayload, SuccessResponse, SuccessResponseWithOutput, UnisolatePodPayload
     }},
     util::time_helper
 };
-use std::process::Command;
+use tokio::io::AsyncReadExt;
 
 
 #[api_v2_operation(tags("Kubernetes"))]
@@ -175,7 +175,7 @@ pub async fn deploy_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<De
 /// Kubernetes Service Seeding
 ///
 /// This api will help you to deploy service in kubernetes
-pub async fn seed_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<SeedServicePayload>) -> Result<Json<SuccessResponse>, Error> {
+pub async fn seed_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<SeedServicePayload>) -> Result<Json<SuccessResponseWithOutput>, Error> {
     // Get `namespace` and `pod name`
     let namespace = &payload.namespace;
     let service_deployment = &payload.service_deployment;
@@ -183,15 +183,29 @@ pub async fn seed_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<Seed
     let module_name = &payload.module_name;
     let class_name = &payload.class_name;
     // Interact with k8s
-    let output = Command::new("kubectl")
-        // php artisan module:seed Form --class=FormOptionEWSSeeder
-        .args(&["exec", "-n", namespace, &format!("deploy/{}", service_deployment), "-c", &container_name, "--", "php", "artisan", "module:seed", &module_name, "--class", &class_name])
-        .output()
-        .expect("Failed to execute kubectl");
-    info!("Executing kubectl: {:?}", output);
+    let client = Client::try_default().await.map_err(|e| ErrorInternalServerError(format!("Kubernetes connection failed: {}", e)))?;
+
+    let pods: Api<Pod> = Api::namespaced(client, &namespace);
+    // Do an interactive exec to a blog pod with the `sh` command
+    let ap = AttachParams::interactive_tty().container(container_name);
+    let lp = ListParams::default().labels(&format!("app={}", service_deployment));
+    let pod_list = pods.list(&lp).await.map_err(|e| ErrorInternalServerError(format!("Failed to list pods: {}", e)))?;
+    let pod_name = pod_list.items.into_iter().next().ok_or_else(|| ErrorInternalServerError("No pods found for the given deployment"))?.metadata.name.unwrap_or_default();
+    let class_arg = format!("--class={}", class_name);
+    let command = vec!["php", "artisan", "module:seed", module_name, class_arg.as_str()];
+    let mut attached = pods.exec(&pod_name, command, &ap).await.map_err(|e| ErrorInternalServerError(format!("Failed to exec into pod: {}", e)))?;
+    // let mut stdin_writer = attached.stdin().unwrap();
+    let mut stdout_reader = attached.stdout().unwrap();
+    let mut buffer = Vec::new();
+    stdout_reader.read_to_end(&mut buffer).await.unwrap();
+    let output = String::from_utf8_lossy(&buffer);
+    info!("Output: {}", output);
     // Check if the request was successful
-    if output.status.success() {
-        Ok(Json(SuccessResponse { status: format!("Service {} seeded!", service_deployment) }))
+    if attached.take_status().unwrap().await.unwrap().status == Some("Success".to_string()) {
+        Ok(Json(SuccessResponseWithOutput {
+            status: format!("Service {} seeded!", service_deployment),
+            output: output.to_string()
+        }))
     } else {
        Err(ErrorInternalServerError(format!("Failed to seed {:?}", output)))
     }

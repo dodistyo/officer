@@ -29,20 +29,7 @@ COPY . .
 RUN cargo build --release --target $TARGET
 RUN ls -lah
 # Stage 2: Final image
-FROM alpine:3.21
-# Install kubectl (get latest version: $(curl -L -s https://dl.k8s.io/release/stable.txt))
-ENV KUBECTL_VERSION="v1.32.2"
-RUN apk add --no-cache \
-    curl \
-    bash \
-    ca-certificates \
-    && curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" \
-    && chmod +x kubectl \
-    && mv kubectl /usr/local/bin/
-
-# Verify installation
-RUN kubectl version --client
-
+FROM scratch
 # Copy the compiled binary from the builder stage
 COPY --from=builder /usr/src/app/target/x86_64-unknown-linux-musl/release/officer /officer
 # Expose port
