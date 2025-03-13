@@ -21,7 +21,6 @@ pub async fn auth_middleware(
     // pre-processing
     let api_key_env = get_api_key();
     let api_key = api_key_header.0.as_str();
-    info!("{}", api_key.is_empty());
     if api_key.is_empty() {
         let res = next.call(req).await?;
         let token = extract_token_from_header(auth_jwt_header).await?;
