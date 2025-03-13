@@ -1,7 +1,6 @@
 use actix_web::{
     body::MessageBody, dev::{ServiceRequest, ServiceResponse}, Error
 };
-use log::info;
 // use actix_web_lab::middleware::Next;
 use crate::{config::get_api_key, model::auth::{ApiKeyHeader, AuthJwtHeader}, util::jwt::{extract_token_from_header, validate_token}};
 
