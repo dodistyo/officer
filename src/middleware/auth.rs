@@ -3,7 +3,7 @@ use actix_web::{
 };
 use log::info;
 // use actix_web_lab::middleware::Next;
-use crate::{config::get_api_key, model::auth::{ApiKeyHeader, AuthJwtHeader}, util::jwt::validate_token};
+use crate::{config::get_api_key, model::auth::{ApiKeyHeader, AuthJwtHeader}, util::jwt::{extract_token_from_header, validate_token}};
 
 use actix_web::middleware::Next;
 
@@ -21,22 +21,12 @@ pub async fn auth_middleware(
     // pre-processing
     let api_key_env = get_api_key();
     let api_key = api_key_header.0.as_str();
+    info!("{}", api_key.is_empty());
     if api_key.is_empty() {
-        let jwt = auth_jwt_header.0.as_str();
         let res = next.call(req).await?;
-
-        // Check if the header starts with "Bearer " and extract the token
-        let token = if jwt.starts_with("Bearer ") {
-            &jwt["Bearer ".len()..]
-        } else {
-            return Err(actix_web::error::ErrorUnauthorized("Invalid Bearer Token!")); // Handle the error case
-        };
-
-        match validate_token(token).await {
-            Ok(token) => {
-                info!("User: {}", token.claims.name);
-                Ok(res)
-            },
+        let token = extract_token_from_header(auth_jwt_header).await?;
+        match validate_token(&token).await {
+            Ok(_) => Ok(res),
             Err(_) => Err(actix_web::error::ErrorUnauthorized("Invalid Token")),
         }
     } else {

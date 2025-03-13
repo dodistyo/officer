@@ -1,10 +1,10 @@
 use actix_session::{SessionMiddleware, storage::CookieSessionStore};
-use actix_web::{middleware::{from_fn, Logger}, web as actweb, App, HttpResponse, HttpServer, Responder};
+use actix_web::{middleware::from_fn, web as actweb, App, HttpResponse, HttpServer, Responder};
 use paperclip::{actix::{web::{self}, OpenApiExt}, v2::models::{DefaultApiRaw, Info}};
 use middleware::auth::auth_middleware;
-use env_logger;
 use dotenv::dotenv;
 use config::{get_envar, get_officer_secret_key};
+
 
 mod middleware;
 mod handler;
@@ -12,15 +12,12 @@ mod config;
 mod model;
 mod util;
 
-async fn healthz() -> impl Responder {
-    HttpResponse::Ok().body("ok")
-}
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // initialize
     dotenv().ok();
-    env_logger::init();
+    // env_logger::init();
+    tracing_subscriber::fmt::init();
     let required_vars = [
         "API_KEY",
         "RUST_LOG",
@@ -68,11 +65,6 @@ async fn main() -> std::io::Result<()> {
         })
         .service(
             actweb::resource("/healthz")
-            .route(actweb::get().to(healthz))
-        )
-        .service(
-            actweb::resource("/private")
-            .wrap(from_fn(auth_middleware))
             .route(actweb::get().to(healthz))
         )
         .route("/auth/oidc", actweb::get().to(handler::oidc::oauth2_login))
@@ -131,9 +123,13 @@ async fn main() -> std::io::Result<()> {
         //     }))
         // })
         // IMPORTANT: Build the app!
-        .wrap(Logger::default())
+        // .wrap(Logger::default())
         .build()
     }
     ).bind("0.0.0.0:8000")?
     .run().await
+}
+
+async fn healthz() -> impl Responder {
+    HttpResponse::Ok().body("ok")
 }

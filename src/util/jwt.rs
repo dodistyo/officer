@@ -1,4 +1,5 @@
 use std::{env, sync::Mutex, thread::sleep};
+use actix_web::Error;
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, TokenData, Validation};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -6,10 +7,12 @@ use dotenv::dotenv;
 use once_cell::sync::Lazy;
 use std::time::Duration;
 
+use crate::model::auth::AuthJwtHeader;
+
 static VERIFICATION_KEY_CACHE: Lazy<Mutex<Option<DecodingKey>>> = Lazy::new(|| {
     Mutex::new(None)
 });
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
     pub sub: String,
     pub name: String,
@@ -41,7 +44,7 @@ async fn fetch_jwks(jwks_url: &str) -> Result<Jwks, Box<dyn std::error::Error>> 
         .timeout(Duration::from_secs(5))
         .build()?;
     
-    println!("Fetching JWKS from URL: {}", jwks_url);
+    // println!("Fetching JWKS from URL: {}", jwks_url);
 
     let mut retries = 3;
     while retries > 0 {
@@ -124,6 +127,17 @@ pub async fn validate_token(token: &str) -> Result<TokenData<Claims>, Box<dyn st
         }
     };
     Ok(token_data)
+}
+
+pub async fn extract_token_from_header(auth_jwt_header: AuthJwtHeader) -> Result<String, Error> {
+    let jwt = auth_jwt_header.0.as_str();
+    // Check if the header starts with "Bearer " and extract the token
+    let token = if jwt.starts_with("Bearer ") {
+        &jwt["Bearer ".len()..] // double dots after len() means from start after "Bearer " to the end
+    } else {
+        return Err(actix_web::error::ErrorUnauthorized("Unauthorized!"));
+    };
+    Ok(token.to_string())
 }
 
 // Create a JWT token

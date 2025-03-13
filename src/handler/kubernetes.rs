@@ -8,25 +8,22 @@ use kube::{
     Client,
 };
 use k8s_openapi::api::{apps::v1::Deployment, core::v1::Pod};
-use log::info;
 use paperclip::actix::{api_v2_operation, web::{Json, Query}};
 use serde_json::{json, Value};
-use crate::{
-    model::{
+use crate::{model::{
         auth::{ApiKeyHeader, AuthJwtHeader},
         kubernetes::{
         DeployServicePayload, GetPodQuery, PodInfo, RestartServicePayload, SeedServicePayload, SuccessResponse, SuccessResponseWithOutput, UnisolatePodPayload
-    }},
-    util::time_helper
+    }}, util::{time_helper, user::user_data}
 };
 use tokio::io::AsyncReadExt;
-
+use tracing::{info, error};
 
 #[api_v2_operation(tags("Kubernetes"))]
 /// Get pods in a namespace 
 ///
 /// List all pods in a namespace, it will show their names and statuses
-pub async fn get_pod(_: ApiKeyHeader,  _: AuthJwtHeader, query: Query<GetPodQuery>) -> Result<Json<Vec<PodInfo>>, Error> {
+pub async fn get_pod(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJwtHeader, query: Query<GetPodQuery>) -> Result<Json<Vec<PodInfo>>, Error> {
     // Interact with k8s
     // Initialize the Kubernetes client
     let client = match Client::try_default().await {
@@ -70,10 +67,17 @@ pub async fn get_pod(_: ApiKeyHeader,  _: AuthJwtHeader, query: Query<GetPodQuer
                     images,
                 }
             }).collect();
-
+            // Start Event Log
+            let api_key = !api_key_header.0.as_str().is_empty();
+            let username = if api_key { "service".to_string() } else { user_data(auth_jwt_header).await?.claims.upn };
+            info!(api_key = api_key, username = username, namespace = namespace, "Get pods:");
+            // End Of Event Log
             Ok(Json(pod_info))
         },
-        Err(e) => Err(ErrorInternalServerError(format!("Could not get pod: {}", e)))
+        Err(e) => {
+            error!("Get pods in namespace: {} failed", namespace);
+            Err(ErrorInternalServerError(format!("Could not get pod: {}", e)))
+        }
     }
 }
 
@@ -81,7 +85,7 @@ pub async fn get_pod(_: ApiKeyHeader,  _: AuthJwtHeader, query: Query<GetPodQuer
 /// Restart Kubernetes Deployment
 ///
 /// This api will restart a deployment on a specific namespace
-pub async fn restart_service_deployment(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<RestartServicePayload>) -> Result<Json<SuccessResponse>, Error> {
+pub async fn restart_service_deployment(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJwtHeader, payload: Json<RestartServicePayload>) -> Result<Json<SuccessResponse>, Error> {
     // Get `namespace` and `pod name`
     let namespace = &payload.namespace;
 
@@ -109,7 +113,14 @@ pub async fn restart_service_deployment(_: ApiKeyHeader,  _: AuthJwtHeader, payl
     // Apply the patch to the pod
     let pp = PatchParams::apply("restart-deployment");
     match deployment.patch(service_deployment, &pp, &Patch::Merge(&patch)).await {
-        Ok(_) => Ok(Json(SuccessResponse { status: format!("Deployment {} restarted", service_deployment) })),
+        Ok(_) => {
+            // Start Event Log
+            let api_key = !api_key_header.0.as_str().is_empty();
+            let username = if api_key { "service".to_string() } else { user_data(auth_jwt_header).await?.claims.upn };
+            info!(api_key = api_key, username = username, deployment = service_deployment, "Restart deployment:");
+            // End Of Event Log
+            Ok(Json(SuccessResponse { status: format!("Deployment {} restarted", service_deployment) }))
+        },
         Err(e) => Err(ErrorInternalServerError(format!("Could not patch pod: {}", e)))
     }
 
@@ -120,7 +131,7 @@ pub async fn restart_service_deployment(_: ApiKeyHeader,  _: AuthJwtHeader, payl
 /// Kubernetes Deployment
 ///
 /// This api will help you to deploy service in kubernetes
-pub async fn deploy_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<DeployServicePayload>) -> Result<Json<SuccessResponse>, Error> {
+pub async fn deploy_service(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJwtHeader, payload: Json<DeployServicePayload>) -> Result<Json<SuccessResponse>, Error> {
     // Get `namespace` and `pod name`
     let namespace = &payload.namespace;
     let service_deployment = &payload.service_deployment;
@@ -163,7 +174,14 @@ pub async fn deploy_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<De
         // Apply the patch to the pod
         let pp = PatchParams::apply("deploy-service");
         match deployment.patch(service_deployment, &pp, &Patch::Merge(&patch)).await {
-            Ok(_) => Ok(Json(SuccessResponse { status: format!("Service {} deployed!", service_deployment) })),
+            Ok(_) => {
+                // Start Event Log
+                let api_key = !api_key_header.0.as_str().is_empty();
+                let username = if api_key { "service".to_string() } else { user_data(auth_jwt_header).await?.claims.upn };
+                info!(api_key = api_key, username = username, deployment = service_deployment, "Deploying service:");
+                // End Of Event Log
+                Ok(Json(SuccessResponse { status: format!("Service {} deployed!", service_deployment) }))
+            },
             Err(e) => Err(ErrorInternalServerError(format!("Could not patch pod: {}", e)))
         }
     } else {
@@ -175,7 +193,7 @@ pub async fn deploy_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<De
 /// Kubernetes Service Seeding
 ///
 /// This api will help you to deploy service in kubernetes
-pub async fn seed_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<SeedServicePayload>) -> Result<Json<SuccessResponseWithOutput>, Error> {
+pub async fn seed_service(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJwtHeader, payload: Json<SeedServicePayload>) -> Result<Json<SuccessResponseWithOutput>, Error> {
     // Get `namespace` and `pod name`
     let namespace = &payload.namespace;
     let service_deployment = &payload.service_deployment;
@@ -202,6 +220,11 @@ pub async fn seed_service(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<Seed
     info!("Output: {}", output);
     // Check if the request was successful
     if attached.take_status().unwrap().await.unwrap().status == Some("Success".to_string()) {
+        // Start Event Log
+        let api_key = !api_key_header.0.as_str().is_empty();
+        let username = if api_key { "service".to_string() } else { user_data(auth_jwt_header).await?.claims.upn };
+        info!(api_key = api_key, username = username, deployment = service_deployment, "Seeding service deployment:");
+        // End Of Event Log
         Ok(Json(SuccessResponseWithOutput {
             status: format!("Service {} seeded!", service_deployment),
             output: output.to_string()
@@ -275,7 +298,7 @@ pub async fn isolate_pod(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<Value
 /// Requirement: Network policy that deny Ingress and Eggress with label selector isolate: "true" 
 /// 
 /// Example usage: Use this endpoint to isolate pod when threat is detected 
-pub async fn unisolate_pod(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<UnisolatePodPayload>) -> Result<Json<SuccessResponse>, Error> {
+pub async fn unisolate_pod(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJwtHeader, payload: Json<UnisolatePodPayload>) -> Result<Json<SuccessResponse>, Error> {
     let namespace = &payload.namespace;
     let pod_name = &payload.pod_name;
     // Interact with k8s
@@ -296,7 +319,14 @@ pub async fn unisolate_pod(_: ApiKeyHeader,  _: AuthJwtHeader, payload: Json<Uni
      // Apply the patch to the pod
      let pp = PatchParams::apply("add-label-isolate");
      match pods.patch(pod_name, &pp, &Patch::Merge(&patch)).await {
-         Ok(_) => Ok(Json(SuccessResponse { status: "Pod is being freed".to_string() })),
+         Ok(_) => {
+            // Start Event Log
+            let api_key = !api_key_header.0.as_str().is_empty();
+            let username = if api_key { "service".to_string() } else { user_data(auth_jwt_header).await?.claims.upn };
+            info!(api_key = api_key, username = username, pod = pod_name, "Unisolate pod:");
+            // End Of Event Log
+            Ok(Json(SuccessResponse { status: "Pod is being freed".to_string() }))
+         },
          Err(e) => Err(ErrorInternalServerError(format!("Could not patch pod: {}", e)))
      }
 }
