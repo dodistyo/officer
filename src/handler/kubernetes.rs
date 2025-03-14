@@ -70,7 +70,7 @@ pub async fn get_pod(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJwtHead
             // Start Event Log
             let api_key = !api_key_header.0.as_str().is_empty();
             let username = if api_key { "service".to_string() } else { user_data(auth_jwt_header).await?.claims.upn };
-            info!(api_key = api_key, username = username, namespace = namespace, "Get pods:");
+            info!(api_key = api_key, username = username, namespace = namespace, action = "Get pods");
             // End Of Event Log
             Ok(Json(pod_info))
         },
@@ -117,7 +117,7 @@ pub async fn restart_service_deployment(api_key_header: ApiKeyHeader,  auth_jwt_
             // Start Event Log
             let api_key = !api_key_header.0.as_str().is_empty();
             let username = if api_key { "service".to_string() } else { user_data(auth_jwt_header).await?.claims.upn };
-            info!(api_key = api_key, username = username, deployment = service_deployment, "Restart deployment:");
+            info!(api_key = api_key, username = username, deployment = service_deployment, action = "Restart deployment:");
             // End Of Event Log
             Ok(Json(SuccessResponse { status: format!("Deployment {} restarted", service_deployment) }))
         },
@@ -178,7 +178,7 @@ pub async fn deploy_service(api_key_header: ApiKeyHeader,  auth_jwt_header: Auth
                 // Start Event Log
                 let api_key = !api_key_header.0.as_str().is_empty();
                 let username = if api_key { "service".to_string() } else { user_data(auth_jwt_header).await?.claims.upn };
-                info!(api_key = api_key, username = username, deployment = service_deployment, "Deploying service:");
+                info!(api_key = api_key, username = username, deployment = service_deployment, action = "Deploying service:");
                 // End Of Event Log
                 Ok(Json(SuccessResponse { status: format!("Service {} deployed!", service_deployment) }))
             },
@@ -223,7 +223,7 @@ pub async fn seed_service(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJw
         // Start Event Log
         let api_key = !api_key_header.0.as_str().is_empty();
         let username = if api_key { "service".to_string() } else { user_data(auth_jwt_header).await?.claims.upn };
-        info!(api_key = api_key, username = username, deployment = service_deployment, "Seeding service deployment:");
+        info!(api_key = api_key, username = username, deployment = service_deployment, action = "Seeding service deployment:");
         // End Of Event Log
         Ok(Json(SuccessResponseWithOutput {
             status: format!("Service {} seeded!", service_deployment),
@@ -323,7 +323,7 @@ pub async fn unisolate_pod(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJ
             // Start Event Log
             let api_key = !api_key_header.0.as_str().is_empty();
             let username = if api_key { "service".to_string() } else { user_data(auth_jwt_header).await?.claims.upn };
-            info!(api_key = api_key, username = username, pod = pod_name, "Unisolate pod:");
+            info!(api_key = api_key, username = username, pod = pod_name, action = "Unisolate pod:");
             // End Of Event Log
             Ok(Json(SuccessResponse { status: "Pod is being freed".to_string() }))
          },
