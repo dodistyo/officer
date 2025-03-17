@@ -192,7 +192,8 @@ pub async fn deploy_service(api_key_header: ApiKeyHeader,  auth_jwt_header: Auth
 #[api_v2_operation(tags("Kubernetes"))]
 /// Kubernetes Service Seeding
 ///
-/// This api will help you to deploy service in kubernetes
+/// This api will help you to seed service in kubernetes
+/// Will basically run command: php artisan module:seed {module_name} --class={class_name}
 pub async fn seed_service(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJwtHeader, payload: Json<SeedServicePayload>) -> Result<Json<SuccessResponseWithOutput>, Error> {
     // Get `namespace` and `pod name`
     let namespace = &payload.namespace;
@@ -217,7 +218,6 @@ pub async fn seed_service(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJw
     let mut buffer = Vec::new();
     stdout_reader.read_to_end(&mut buffer).await.unwrap();
     let output = String::from_utf8_lossy(&buffer);
-    info!("Output: {}", output);
     // Check if the request was successful
     if attached.take_status().unwrap().await.unwrap().status == Some("Success".to_string()) {
         // Start Event Log
