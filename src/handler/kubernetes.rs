@@ -211,7 +211,7 @@ pub async fn seed_service(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJw
     let pod_list = pods.list(&lp).await.map_err(|e| ErrorInternalServerError(format!("Failed to list pods: {}", e)))?;
     let pod_name = pod_list.items.into_iter().next().ok_or_else(|| ErrorInternalServerError("No pods found for the given deployment"))?.metadata.name.unwrap_or_default();
     let class_arg = format!("--class={}", class_name);
-    let command = vec!["php", "artisan", "module:seed", module_name, class_arg.as_str()];
+    let command = vec!["php", "artisan", "module:seed", module_name, class_arg.as_str(), "--force"];
     let mut attached = pods.exec(&pod_name, command, &ap).await.map_err(|e| ErrorInternalServerError(format!("Failed to exec into pod: {}", e)))?;
     // let mut stdin_writer = attached.stdin().unwrap();
     let mut stdout_reader = attached.stdout().unwrap();
