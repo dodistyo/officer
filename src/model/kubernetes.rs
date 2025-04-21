@@ -42,8 +42,7 @@ pub struct SeedServicePayload {
     pub namespace: String,
     pub service_deployment: String,
     pub container_name: String,
-    pub module_name: String,
-    pub class_name: String
+    pub arguments: Vec<String>,
 }
 
 #[derive(Deserialize, Apiv2Schema)]

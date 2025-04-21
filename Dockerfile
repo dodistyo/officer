@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM rust:1.85.0 AS builder
+FROM rust:1.86.0 AS builder
 
 # Install dependencies including CA certificates
 RUN apt-get update && apt-get install -y \

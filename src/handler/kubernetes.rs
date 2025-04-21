@@ -193,14 +193,16 @@ pub async fn deploy_service(api_key_header: ApiKeyHeader,  auth_jwt_header: Auth
 /// Kubernetes Service Seeding
 ///
 /// This api will help you to seed service in kubernetes
-/// Will basically run command: php artisan module:seed {module_name} --class={class_name}
+/// 
+/// Pass the arguments and don't forget to use --force in the arguments, example: arguments: ["{module_name}", "--class={class_name}", "--force"]
+/// 
+/// Will basically run command: php artisan module:seed {module_name} --class={class_name} --force
 pub async fn seed_service(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJwtHeader, payload: Json<SeedServicePayload>) -> Result<Json<SuccessResponseWithOutput>, Error> {
     // Get `namespace` and `pod name`
     let namespace = &payload.namespace;
     let service_deployment = &payload.service_deployment;
     let container_name = &payload.container_name;
-    let module_name = &payload.module_name;
-    let class_name = &payload.class_name;
+    let arguments = &payload.arguments;
     // Interact with k8s
     let client = Client::try_default().await.map_err(|e| ErrorInternalServerError(format!("Kubernetes connection failed: {}", e)))?;
 
@@ -210,8 +212,9 @@ pub async fn seed_service(api_key_header: ApiKeyHeader,  auth_jwt_header: AuthJw
     let lp = ListParams::default().labels(&format!("app={}", service_deployment));
     let pod_list = pods.list(&lp).await.map_err(|e| ErrorInternalServerError(format!("Failed to list pods: {}", e)))?;
     let pod_name = pod_list.items.into_iter().next().ok_or_else(|| ErrorInternalServerError("No pods found for the given deployment"))?.metadata.name.unwrap_or_default();
-    let class_arg = format!("--class={}", class_name);
-    let command = vec!["php", "artisan", "module:seed", module_name, class_arg.as_str(), "--force"];
+    let mut command = vec!["php", "artisan", "module:seed"];
+    let mut arguments_as_str: Vec<&str> = arguments.iter().map(String::as_str).collect();
+    command.append(&mut arguments_as_str);
     let mut attached = pods.exec(&pod_name, command, &ap).await.map_err(|e| ErrorInternalServerError(format!("Failed to exec into pod: {}", e)))?;
     // let mut stdin_writer = attached.stdin().unwrap();
     let mut stdout_reader = attached.stdout().unwrap();
