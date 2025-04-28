@@ -20,6 +20,8 @@ FROM rust:1.86.0 as cacher
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y musl-tools && rm -rf /var/lib/apt/lists/*
+
 RUN cargo install cargo-chef
 
 RUN rustup target add x86_64-unknown-linux-musl
