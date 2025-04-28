@@ -22,6 +22,7 @@ WORKDIR /app
 
 RUN cargo install cargo-chef
 
+RUN rustup target add x86_64-unknown-linux-musl
 # Copy recipe generated previously
 COPY --from=planner /app/recipe.json recipe.json
 
